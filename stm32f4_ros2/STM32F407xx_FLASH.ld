@@ -149,6 +149,14 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
+  /* heap_4 initializes its own metadata; no reset-time zeroing/copy is needed. */
+  .ccm_heap (NOLOAD) :
+  {
+    . = ALIGN(8);
+    *(.ccm_heap)
+    . = ALIGN(8);
+  } >CCMRAM
+
   _siccmram = LOADADDR(.ccmram);
 
   /* CCM-RAM section

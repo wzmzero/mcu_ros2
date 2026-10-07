@@ -22,6 +22,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "board.h"
+#ifdef APP_ROS_USB_RNDIS
+#include "usb_network.h"
+#endif
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,6 +108,10 @@ int main(void)
   */
 void SystemClock_Config(void)
 {
+#ifdef APP_ROS_USB_RNDIS
+  usb_network_clock_config();
+  return;
+#endif
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 

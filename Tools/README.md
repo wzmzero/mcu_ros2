@@ -39,6 +39,8 @@ USB RNDIS 在本机通过 Windows 网卡和 WSL mirrored 网络通信。`ping 19
 .\Tools\scripts\configure_agent_firewall.ps1 -Target wsl -McuAddress 192.168.7.1 -Port 8888
 ```
 
+STM32 的 USB RNDIS 默认使用 192.168.8.1/24。两块板同时使用时，将上述 `-McuAddress` 改为 `192.168.7.1,192.168.8.1`，保留两块板的入站放行地址。一个 UDP Agent 即可接两块板。STM32 的配置菜单、构建与原生 USB 接线见 [STM32 README](../stm32f4_ros2/README.md)。
+
 这会在 Windows 和 Hyper-V 防火墙中创建或更新仅允许该 MCU 发往 UDP 8888 的入站规则。默认 `-Target windows` 仍配置 Windows 原生 Agent。当前 WSL Agent 可保持运行，固件会自动重试；随后在另一个 WSL 终端订阅 `/esp32s3/heartbeat`。此选项适用于 mirrored 网络，不能替代 NAT 下的 UDP 转发。2026-10-07 后续排查确认：UDP 8888 允许规则已存在，WSL 中的 micro_ros_agent 与 MCU 建立会话。WSL rclpy 实板测试收到 heartbeat `84、85、86`，发送 command=57007 后收到 13 次对应 echo，双向收发通过。记录见 `build/wsl_agent/validation.json` 与 `build/wsl_agent/agent.log`，构建及测试产物均不随 Git 提交。
 
 ```bash

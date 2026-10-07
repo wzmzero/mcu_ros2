@@ -21,14 +21,13 @@ set_target_properties(microros PROPERTIES IMPORTED_LOCATION "${MICROROS_ROOT}/li
     INTERFACE_INCLUDE_DIRECTORIES "${MICROROS_ROOT}/include")
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Src ${MICRO_ROS_APP_INCS} ${RTOS}/include ${RTOS}/portable/GCC/ARM_CM4F)
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE APP_ROS_DOMAIN_ID=${ROS_DOMAIN_ID})
+include("${CMAKE_CURRENT_LIST_DIR}/usb_network.cmake")
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Src/board.c
     ${MICRO_ROS_APP_SRCS}
     ${CMAKE_SOURCE_DIR}/Src/micro_ros_platform.c
     ${CMAKE_SOURCE_DIR}/Src/micro_ros_memory.c
     ${CMAKE_SOURCE_DIR}/Src/micro_ros_time.c
-    ${CMAKE_SOURCE_DIR}/Src/uart_transport.c
     ${CMAKE_SOURCE_DIR}/Core/Src/stm32f4xx_hal_timebase_tim.c
     ${RTOS}/tasks.c ${RTOS}/queue.c ${RTOS}/list.c ${RTOS}/timers.c
     ${RTOS}/event_groups.c ${RTOS}/stream_buffer.c
@@ -37,6 +36,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c
     ${CMAKE_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim.c
     ${CMAKE_SOURCE_DIR}/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_tim_ex.c)
+if(NOT STM32_USB_RNDIS)
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/Src/uart_transport.c)
+endif()
 target_link_libraries(${CMAKE_PROJECT_NAME} microros)
 add_custom_command(TARGET ${CMAKE_PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${CMAKE_PROJECT_NAME}> ${CMAKE_PROJECT_NAME}.bin

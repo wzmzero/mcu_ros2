@@ -23,6 +23,24 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release"
             }
+        },
+        {
+            "name": "USB-Debug",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "STM32_SDKCONFIG": "${sourceDir}/sdkconfig.usb",
+                "STM32_USB_RNDIS": "ON"
+            }
+        },
+        {
+            "name": "USB-Release",
+            "inherits": "default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "STM32_SDKCONFIG": "${sourceDir}/sdkconfig.usb",
+                "STM32_USB_RNDIS": "ON"
+            }
         }
     ],
     "buildPresets": [
@@ -33,6 +51,14 @@
         {
             "name": "Release",
             "configurePreset": "Release"
+        },
+        {
+            "name": "USB-Debug",
+            "configurePreset": "USB-Debug"
+        },
+        {
+            "name": "USB-Release",
+            "configurePreset": "USB-Release"
         }
     ]
 }

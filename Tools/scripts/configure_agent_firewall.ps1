@@ -1,5 +1,5 @@
 param(
-    [System.Net.IPAddress]$McuAddress = '192.168.7.1',
+    [System.Net.IPAddress[]]$McuAddress = @('192.168.7.1'),
     [ValidateRange(1, 65535)][int]$Port = 8888,
     [ValidateSet('windows', 'wsl')][string]$Target = 'windows'
 )
@@ -10,10 +10,14 @@ $principal = [Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     throw 'Run this script in an administrator PowerShell window.'
 }
-if ($McuAddress.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
-    $McuAddress.Equals([Net.IPAddress]::Any) -or $McuAddress.Equals([Net.IPAddress]::Broadcast)) {
-    throw 'McuAddress must be an individual IPv4 address.'
+if (-not $McuAddress.Count) { throw 'Supply at least one MCU address.' }
+foreach ($address in $McuAddress) {
+    if ($address.AddressFamily -ne [Net.Sockets.AddressFamily]::InterNetwork -or
+        $address.Equals([Net.IPAddress]::Any) -or $address.Equals([Net.IPAddress]::Broadcast)) {
+        throw 'McuAddress must contain individual IPv4 addresses.'
+    }
 }
+$remoteAddresses = @($McuAddress | ForEach-Object { $_.ToString() } | Select-Object -Unique)
 
 if ($Target -eq 'wsl') {
     # Mirrored WSL traffic is also filtered by the Hyper-V firewall. Native
@@ -31,7 +35,7 @@ if ($Target -eq 'wsl') {
         Action = 'Allow'
         Protocol = 'UDP'
         LocalPort = $Port
-        RemoteAddress = $McuAddress.ToString()
+        RemoteAddress = $remoteAddresses
         Profile = 'Any'
     }
     if (Get-NetFirewallRule -Name $ruleName -ErrorAction SilentlyContinue) {
@@ -47,7 +51,7 @@ if ($Target -eq 'wsl') {
         VMCreatorId = '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}'
         Protocol = 'UDP'
         LocalPorts = $Port
-        RemoteAddresses = $McuAddress.ToString()
+        RemoteAddresses = $remoteAddresses
     }
     if (Get-NetFirewallHyperVRule -Name $ruleName -ErrorAction SilentlyContinue) {
         Set-NetFirewallHyperVRule @vmOptions | Out-Null
@@ -86,7 +90,7 @@ $ruleOptions = @{
     Program = $agentPath
     Protocol = 'UDP'
     LocalPort = $Port
-    RemoteAddress = $McuAddress.ToString()
+    RemoteAddress = $remoteAddresses
     Profile = 'Any'
 }
 if ($existing) {

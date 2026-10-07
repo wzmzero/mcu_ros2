@@ -9,9 +9,14 @@ extern uint32_t SystemCoreClock;
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
 #define configCPU_CLOCK_HZ SystemCoreClock
 #define configTICK_RATE_HZ ((TickType_t)1000)
+/* TinyUSB supports newer FreeRTOS as well; this kernel predates the macro. */
+#define pdTICKS_TO_MS(ticks) ((uint32_t)((uint64_t)(ticks) * 1000 / configTICK_RATE_HZ))
 #define configMAX_PRIORITIES 8
 #define configMINIMAL_STACK_SIZE ((uint16_t)128)
 #define configTOTAL_HEAP_SIZE ((size_t)(64 * 1024))
+#ifdef APP_ROS_USB_RNDIS
+#define configAPPLICATION_ALLOCATED_HEAP 1
+#endif
 #define configMAX_TASK_NAME_LEN 16
 #define configUSE_16_BIT_TICKS 0
 #define configUSE_IDLE_HOOK 0

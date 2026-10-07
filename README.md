@@ -10,12 +10,13 @@ mcu_ros2/
     transport/           公共 UDP Socket 传输
     cmake/firmware.cmake  公共源码清单，两个平台同时引用
   stm32f4_ros2/
-    Src/                 启动、UART DMA、FreeRTOS 内存/时间及平台适配
+    Src/                 启动、UART DMA、USB RNDIS/lwIP、FreeRTOS 及平台适配
     Core/ Drivers/ Middlewares/ cmake/
     Middlewares/Third_Party/micro_ros/
       tools/             官方 STM32 移植及库生成工具
       lib/jazzy/         ARM 静态库和配套 include
-    scripts/             STM32 静态库生成
+    scripts/             STM32 静态库生成及 menuconfig
+    Kconfig              编译前选择通信、ROS 域及 USB 网络参数
   esp32s3_ros2/
     Src/                 app_main、ESP-IDF 平台适配、USB/UART/Wi-Fi 网络
     components/micro_ros_espidf_component/
@@ -35,9 +36,11 @@ mcu_ros2/
 | STM32F407 | ARM GCC + CMake | USART1 PA9/PA10，115200 | /stm32/heartbeat |
 | ESP32-S3 | ESP-IDF | 原生 USB Serial/JTAG | /esp32s3/heartbeat |
 
-两板的 command、echo 都为 std_msgs/msg/Int32，位于各自命名空间。默认 ROS_DOMAIN_ID=0。两块板同时接入时，分别启动一个串口 Agent，ROS 2 终端可同时看到两组话题。
+两板的 command、echo 都为 std_msgs/msg/Int32，位于各自命名空间。默认 ROS_DOMAIN_ID=0。两块板使用串口时分别启动串口 Agent；使用 UDP 时可共用一个 UDP Agent，ROS 2 终端可同时看到两组话题。
 
 ESP32 也可选择 Wi-Fi UDP 或 USB RNDIS UDP，配置、构建和测试见 [网络模式说明](esp32s3_ros2/NETWORK.md)。网络 Agent 使用 `bash Tools/scripts/agent.sh udp 8888 jazzy`。
+
+STM32 可通过 `cmake --build build/Release --target menuconfig` 选择 UART 或 USB RNDIS UDP，默认 USB 地址为 MCU 192.168.8.1、主机 192.168.8.2，与 ESP32 的 192.168.7.0/24 分开。菜单在 Windows 原生运行，完整命令见 [STM32 README](stm32f4_ros2/README.md)。
 
 
 ## 公共代码改哪里
@@ -55,7 +58,7 @@ heartbeat、command、echo 使用相对话题名，由平台命名空间展开�
 
 ## 构建
 
-STM32：在 stm32f4_ros2 执行 `cmake --preset Release`、`cmake --build --preset Release`。已有 Jazzy 静态库随工程迁移，无需重新生成。
+STM32：在 stm32f4_ros2 执行 `cmake --preset Release`、`cmake --build build/Release --target menuconfig`、`cmake --build --preset Release`。本地已有 Jazzy 静态库可直接使用；新检出工程需要先按 STM32 README 生成库。
 
 ESP32：与 STM32 相同，可在 WSL 生成库、Windows 构建和烧录应用，不需要在 WSL 安装 ESP-IDF。先在激活的 Windows ESP-IDF 终端执行 `idf.py -DMICROROS_PREPARE=ON reconfigure`，在 WSL 中执行 `bash scripts/build_micro_ros.sh`，再在 Windows 执行 `idf.py -DMICROROS_PREPARE=OFF build`。以后只修改应用代码直接 `idf.py build`。详细命令和依赖见 [ESP32 README](esp32s3_ros2/README.md)。
 
@@ -101,6 +104,8 @@ bash Tools/scripts/test_agent.sh jazzy
 ## 验证状态
 
 公共源码抽离后 STM32 完整 Release 编译链接通过：Flash 83,360 B、SRAM 92,824 B。
+
+2026-10-08：STM32 添加 menuconfig 和 USB RNDIS + UDP，Windows 菜单启动、配置切换及无效参数测试通过。UART / USB 的 Debug、Release 构建通过；USB Release 主 SRAM 51,440 B，另在 CCM 预留 64 KiB FreeRTOS 堆。USB 固件已通过 ST-Link 烧录校验，STM32 原生 USB 网卡尚未枚举，网络和 ROS 话题的实板收发待验证。
 
 2026-10-07：ESP32 Windows + WSL 完整构建通过。WSL 复用 Windows SDK 并生成 1,695 对象的 Xtensa 库，Windows ESP-IDF 6.1 成功链接固件，生成 238,048 B 的 bin；未安装 Linux ESP-IDF。详细记录见 ESP32 README 和 esp32s3_ros2/build/workflow_validation.json。烧录与实板 heartbeat/echo 尚未验证。现有 Agent 的构建及软件 ping/PTY 检查记录保留在旧 build 下。
 

@@ -2,13 +2,20 @@
 #include "main.h"
 #include "micro_ros.h"
 #include "uart_transport.h"
+#ifdef APP_ROS_USB_RNDIS
+#include "usb_network.h"
+#endif
 #include "FreeRTOS.h"
 #include "task.h"
 #include <errno.h>
 
 void board_start(void)
 {
+#ifdef APP_ROS_USB_RNDIS
+    usb_network_start();
+#else
     uart_dma_init();
+#endif
     /* Stack is in words: 4096 * 4 = 16 KiB. */
     if (xTaskCreate(micro_ros_task, "micro_ros", 4096, NULL, 3, NULL) != pdPASS)
         board_panic();

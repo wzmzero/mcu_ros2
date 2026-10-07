@@ -1,7 +1,9 @@
 #include "micro_ros_platform.h"
 #include "micro_ros_memory.h"
 #include "board.h"
+#ifndef APP_ROS_USB_RNDIS
 #include "uart_transport.h"
+#endif
 #include "FreeRTOS.h"
 #include "task.h"
 #include <rcutils/allocator.h>
@@ -17,7 +19,12 @@ void micro_ros_platform_init(void)
 }
 micro_ros_platform_config_t micro_ros_platform_config(void)
 {
+#ifdef APP_ROS_USB_RNDIS
+    uint32_t key = HAL_GetUIDw0() ^ HAL_GetUIDw1() ^ HAL_GetUIDw2();
+    return (micro_ros_platform_config_t){"stm32f407", "/stm32", APP_ROS_DOMAIN_ID, key ? key : 1, false};
+#else
     return (micro_ros_platform_config_t){"stm32f407", "/stm32", APP_ROS_DOMAIN_ID, 0, true};
+#endif
 }
 uint32_t micro_ros_platform_millis(void) { return HAL_GetTick(); }
 void micro_ros_platform_delay(uint32_t milliseconds)
@@ -28,6 +35,7 @@ void micro_ros_platform_delay(uint32_t milliseconds)
 }
 void micro_ros_platform_panic(void) { board_panic(); }
 
+#ifndef APP_ROS_USB_RNDIS
 bool micro_ros_transport_open(struct uxrCustomTransport *t)
 { (void)t; return uart_dma_open(); }
 bool micro_ros_transport_close(struct uxrCustomTransport *t)
@@ -47,3 +55,4 @@ size_t micro_ros_transport_read(struct uxrCustomTransport *t, uint8_t *data, siz
     *error = (failures == uart_errors && overruns == uart_rx_overruns) ? 0 : 1;
     return count;
 }
+#endif

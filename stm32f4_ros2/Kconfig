@@ -1,0 +1,49 @@
+mainmenu "STM32F407 micro-ROS configuration"
+
+menu "micro-ROS application"
+choice ROS_TRANSPORT
+    prompt "micro-ROS transport"
+    default ROS_TRANSPORT_UART
+config ROS_TRANSPORT_UART
+    bool "USART1 DMA (PA9 TX / PA10 RX)"
+config ROS_TRANSPORT_USB_RNDIS
+    bool "Native USB RNDIS + UDP (PA11 D- / PA12 D+)"
+endchoice
+
+config ROS_DOMAIN_ID
+    int "ROS domain ID"
+    range 0 232
+    default 0
+config ROS_UART_BAUD
+    int "USART1 baud rate"
+    depends on ROS_TRANSPORT_UART
+    range 9600 921600
+    default 115200
+
+menu "USB network"
+    depends on ROS_TRANSPORT_USB_RNDIS
+config USB_HSE_HZ
+    int "External crystal frequency (Hz, whole MHz)"
+    range 4000000 26000000
+    default 8000000
+    help
+        Use the crystal fitted on the board. USB needs a precise 48 MHz clock.
+        The reference mcu_test board uses an 8 MHz crystal.
+config USB_MCU_IP
+    string "MCU IPv4 address (/24)"
+    default "192.168.8.1"
+config USB_HOST_IP
+    string "USB host DHCP address (/24)"
+    default "192.168.8.2"
+    help
+        MCU and host must have different host addresses in the same /24.
+        The DHCP offer contains no default gateway or DNS server.
+config ROS_AGENT_IP
+    string "micro-ROS Agent IPv4 address"
+    default USB_HOST_IP
+config ROS_AGENT_PORT
+    int "micro-ROS Agent UDP port"
+    range 1 65535
+    default 8888
+endmenu
+endmenu

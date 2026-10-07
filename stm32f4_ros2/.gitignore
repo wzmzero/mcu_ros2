@@ -1,5 +1,7 @@
 /build/
 /.idea/
+/sdkconfig.usb
+/sdkconfig.usb.old
 /Middlewares/Third_Party/micro_ros/tools/microros_static_library/libmicroros/
 __pycache__/
 
