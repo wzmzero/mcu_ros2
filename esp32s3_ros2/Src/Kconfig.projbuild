@@ -1,0 +1,61 @@
+menu "ESP32-S3 ROS 2 application"
+config APP_ROS_DOMAIN_ID
+    int "ROS_DOMAIN_ID (same as Agent and host)"
+    range 0 232
+    default 0
+choice APP_ROS_TRANSPORT
+    prompt "micro-ROS transport"
+    default APP_ROS_USB_SERIAL_JTAG
+config APP_ROS_USB_SERIAL_JTAG
+    bool "Native USB Serial/JTAG (GPIO19 D-, GPIO20 D+)"
+config APP_ROS_UART1
+    bool "UART1 with an external USB-UART adapter"
+config APP_ROS_WIFI_UDP
+    bool "Wi-Fi + lwIP UDP"
+config APP_ROS_USB_RNDIS_UDP
+    bool "USB OTG RNDIS network + lwIP UDP"
+endchoice
+if APP_ROS_WIFI_UDP || APP_ROS_USB_RNDIS_UDP
+config APP_ROS_AGENT_IP
+    string "Agent IPv4 address (reachable from MCU)"
+    default "192.168.7.2" if APP_ROS_USB_RNDIS_UDP
+    default "192.168.1.100"
+config APP_ROS_AGENT_PORT
+    int "Agent UDP port"
+    range 1 65535
+    default 8888
+endif
+if APP_ROS_WIFI_UDP
+config APP_ROS_WIFI_COUNTRY
+    string "Wi-Fi country code (use the deployment region)"
+    default "01"
+    help
+        ISO country code such as CN or US; 01 is world safe mode.
+        Select the deployment region to enable its permitted Wi-Fi channels.
+config APP_ROS_WIFI_SSID
+    string "Wi-Fi SSID"
+    default ""
+config APP_ROS_WIFI_PASSWORD
+    string "Wi-Fi password"
+    default ""
+endif
+if APP_ROS_USB_RNDIS_UDP
+config APP_ROS_USB_DHCP_SERVER
+    bool "Assign the USB host IPv4 address using DHCP"
+    default y
+    select LWIP_DHCPS
+    help
+        MCU uses 192.168.7.1/24 and offers 192.168.7.2-3 to the USB host.
+        No default gateway or DNS is advertised on this direct link.
+endif
+if APP_ROS_UART1
+config APP_ROS_UART_TX
+    int "UART1 TX GPIO"
+    range 0 48
+    default 17
+config APP_ROS_UART_RX
+    int "UART1 RX GPIO"
+    range 0 48
+    default 18
+endif
+endmenu

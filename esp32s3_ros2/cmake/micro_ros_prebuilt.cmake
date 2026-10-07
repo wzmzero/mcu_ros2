@@ -1,0 +1,81 @@
+# Keep SDK configuration and the library build together, while compiling the
+# application with Windows ESP-IDF and the archive with the matching WSL GCC.
+set(_library_root "${PROJECT_DIR}/lib/micro_ros/jazzy")
+set(_request "${CMAKE_BINARY_DIR}/micro_ros_request.json")
+
+function(_uros_json_string key value)
+    string(REPLACE "\\" "/" value "${value}")
+    string(REPLACE "\"" "\\\"" value "${value}")
+    string(REPLACE "\n" "\\n" value "${value}")
+    string(JSON _json SET "${_json}" "${key}" "\"${value}\"")
+    set(_json "${_json}" PARENT_SCOPE)
+endfunction()
+
+set(_json "{}")
+_uros_json_string(project "${PROJECT_DIR}")
+_uros_json_string(component "${COMPONENT_DIR}")
+_uros_json_string(idf_path "${IDF_PATH}")
+_uros_json_string(build_dir "${CMAKE_BINARY_DIR}")
+_uros_json_string(target "${IDF_TARGET}")
+_uros_json_string(compiler "${CMAKE_C_COMPILER}")
+execute_process(COMMAND "${CMAKE_C_COMPILER}" --version OUTPUT_VARIABLE _compiler_banner
+    COMMAND_ERROR_IS_FATAL ANY)
+_uros_json_string(compiler_banner "${_compiler_banner}")
+_uros_json_string(middleware "${MIDDLEWARE}")
+_uros_json_string(app_meta "${APP_COLCON_META}")
+_uros_json_string(extra_packages "${EXTRA_ROS_PACKAGES}")
+string(JSON _json SET "${_json}" c_standard "${CMAKE_C_STANDARD}")
+set(_includes "${COMPONENT_DIR}/include_override" "${CMAKE_BINARY_DIR}/config")
+foreach(_package ${PACKAGES})
+    idf_component_get_property(_package_dir ${_package} COMPONENT_DIR)
+    idf_component_get_property(_package_includes ${_package} INCLUDE_DIRS)
+    foreach(_include IN LISTS _package_includes)
+        get_filename_component(_include "${_include}" ABSOLUTE BASE_DIR "${_package_dir}")
+        list(APPEND _includes "${_include}")
+    endforeach()
+endforeach()
+list(REMOVE_DUPLICATES _includes)
+string(JSON _json SET "${_json}" includes "[]")
+set(_index 0)
+foreach(_include IN LISTS _includes)
+    string(REPLACE "\\" "/" _include "${_include}")
+    string(JSON _json SET "${_json}" includes ${_index} "\"${_include}\"")
+    math(EXPR _index "${_index}+1")
+endforeach()
+file(WRITE "${_request}" "${_json}\n")
+
+if(MICROROS_PREPARE)
+    file(MAKE_DIRECTORY "${_library_root}/include")
+    # Prevent accidental firmware builds with the configure-only switch left on.
+    add_custom_target(microros_prepare_only
+        COMMAND ${CMAKE_COMMAND} -E echo "Run the WSL library builder, then idf.py -DMICROROS_PREPARE=OFF build"
+        COMMAND ${CMAKE_COMMAND} -E false)
+    add_dependencies(${COMPONENT_LIB} microros_prepare_only)
+    message(STATUS "WSL micro-ROS request exported: ${_request}")
+else()
+    execute_process(COMMAND "${PYTHON}" "${PROJECT_DIR}/scripts/micro_ros_bridge.py"
+        verify "${_request}" RESULT_VARIABLE _verify_result)
+    if(NOT _verify_result EQUAL 0)
+        message(FATAL_ERROR "Generate the matching micro-ROS library in WSL first; see README.md (Windows + WSL).")
+    endif()
+    # Each build checks again: another build directory may have replaced the
+    # shared archive since this directory last ran CMake.
+    add_custom_target(microros_verify_library
+        COMMAND "${PYTHON}" "${PROJECT_DIR}/scripts/micro_ros_bridge.py" verify "${_request}"
+        VERBATIM)
+    add_dependencies(${COMPONENT_LIB} microros_verify_library)
+endif()
+
+add_prebuilt_library(libmicroros-prebuilt "${_library_root}/libmicroros.a" REQUIRES lwip)
+if(NOT MICROROS_PREPARE)
+    add_dependencies(libmicroros-prebuilt microros_verify_library)
+endif()
+target_include_directories(libmicroros-prebuilt INTERFACE "${_library_root}/include")
+file(GLOB _include_folders LIST_DIRECTORIES true CONFIGURE_DEPENDS "${_library_root}/include/*")
+foreach(_include IN LISTS _include_folders)
+    if(IS_DIRECTORY "${_include}")
+        target_include_directories(libmicroros-prebuilt INTERFACE "${_include}")
+    endif()
+endforeach()
+target_link_libraries(${COMPONENT_LIB} INTERFACE libmicroros-prebuilt)
+message(STATUS "micro-ROS WSL library: ${_library_root}/libmicroros.a")

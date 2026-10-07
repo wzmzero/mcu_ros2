@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/micro-ROS/micro_ros_stm32cubemx_utils",
+  "ref": "humble",
+  "files": {
+    "microros_static_library/library_generation/library_generation.sh": "13f4ad4c3b18ab8934d67779a45963ea1fc44862",
+    "microros_static_library/library_generation/colcon.meta": "5bb8eff8711b865df019596b72b0663a9684495c",
+    "microros_static_library/library_generation/extra_packages/extra_packages.repos": "309e1fb7026893abf144228cacca7c0ef1662ca0",
+    "microros_static_library/library_generation/toolchain.cmake": "731fe189b57c2ed6a40f8a3e2602b8b1646f7f5f",
+    "LICENSE": "d645695673349e3947e8e5ae42332d0ac3164cd7",
+    "README.md": "6b49a631e04f79997759204935047536ffc09051"
+  },
+  "modifications": [
+    "colcon.meta: fix stream framing flag; reduce entity pools to 1 node, 2 publishers, 1 subscription",
+    "extra_packages.repos: omit control_msgs; only std_msgs Int32 is needed",
+    "library_generation.sh: omit unused tf2_msgs and use ROS_DISTRO from builder image"
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "repository": "https://github.com/micro-ROS/micro_ros_espidf_component",
+  "branch": "jazzy",
+  "commit": "5cd71f525eedc1e59a48e3a12184ba75b60b05b7",
+  "files": [
+    {
+      "path": ".gitignore",
+      "git_blob_sha": "9e76854c23fad5ff820b93b72cc7aa6404f4c9eb"
+    },
+    {
+      "path": "3rd-party-licenses.txt",
+      "git_blob_sha": "6dd341c93ca06a548762c537565fee571c8ee162"
+    },
+    {
+      "path": "CHANGELOG.rst",
+      "git_blob_sha": "c89bd975a96af151f9d18cbddd581df106a18a70"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "git_blob_sha": "92e6afba3aebf93b35261348daa80a79dda1f297"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "git_blob_sha": "5ec461fc579b831d246a27d0ba04278c8faa8ca0"
+    },
+    {
+      "path": "Kconfig.projbuild",
+      "git_blob_sha": "466a970599e25fb14d26fd9fc54d063507ae60ea"
+    },
+    {
+      "path": "LICENSE",
+      "git_blob_sha": "d645695673349e3947e8e5ae42332d0ac3164cd7"
+    },
+    {
+      "path": "NOTICE",
+      "git_blob_sha": "8797b1fee46b35918ad61225b9583b95a046b10e"
+    },
+    {
+      "path": "README.md",
+      "git_blob_sha": "54ae66b453c3f8d230670b860e8678374ed2fb78"
+    },
+    {
+      "path": "colcon.meta",
+      "git_blob_sha": "10c22199471b59b9068905b2137aacc5f03104ee"
+    },
+    {
+      "path": "esp32_toolchain.cmake.in",
+      "git_blob_sha": "671eb8f653b00da9e9ad365a71147f343d75b954"
+    },
+    {
+      "path": "extra_packages/.gitignore",
+      "git_blob_sha": "530234efaccef14f541b8daf666f94260ce5c80e"
+    },
+    {
+      "path": "extra_packages/README.md",
+      "git_blob_sha": "829654234e96fc9dc43b9f82b9c686dbf4e98b61"
+    },
+    {
+      "path": "idf_component.yml",
+      "git_blob_sha": "fc25f438c1841e4313bc2a0c2f3f7885ecc06a4b"
+    },
+    {
+      "path": "include_override/FreeRTOS.h",
+      "git_blob_sha": "3e5f338e5f3644cd0a17e4b6e5eb6cb1ef1373ac"
+    },
+    {
+      "path": "include_override/assert.h",
+      "git_blob_sha": "e0a229dc32f7bc336413a78ec50e120522f0ad19"
+    },
+    {
+      "path": "include_override/esp_macros.h",
+      "git_blob_sha": "cc75b5d9a1bf80d103c196b96cf0b39ef82d4d03"
+    },
+    {
+      "path": "include_override/semphr.h",
+      "git_blob_sha": "4ed09675b2c98d340ce1877851481cf40920b8ec"
+    },
+    {
+      "path": "libmicroros.mk",
+      "git_blob_sha": "477cad0851790afee173e606a5fc43f354e2ec4b"
+    },
+    {
+      "path": "network_interfaces/uros_ethernet_netif.c",
+      "git_blob_sha": "8e45971c7bae70bca2128a893d3b94b4057dbe02"
+    },
+    {
+      "path": "network_interfaces/uros_network_interfaces.h",
+      "git_blob_sha": "169da42d633bc45151d54c8d704ed1bbc0972952"
+    },
+    {
+      "path": "network_interfaces/uros_wlan_netif.c",
+      "git_blob_sha": "f2f5a35d840b55b3ee9619e034eed7fce7816988"
+    },
+    {
+      "path": "package.xml",
+      "git_blob_sha": "d8c3b6709b6229298abfccc2d977ddef8d6ac078"
+    }
+  ],
+  "modifications": [
+    {
+      "path": "CMakeLists.txt",
+      "description": "Add MICROROS_PREBUILT entry for Windows application + WSL archive builds; remove dependency on nonexistent libmicroros_project target. Upstream Makefile and toolchain template remain unchanged."
+    }
+  ]
+}

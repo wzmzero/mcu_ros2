@@ -1,0 +1,10 @@
+{
+  "names": {
+    "microxrcedds_client": {
+      "cmake-args": ["-DUCLIENT_PROFILE_DISCOVERY=OFF", "-DUCLIENT_PROFILE_UDP=OFF", "-DUCLIENT_PROFILE_STREAM_FRAMING=ON", "-DUCLIENT_PROFILE_CUSTOM_TRANSPORT=ON"]
+    },
+    "rmw_microxrcedds": {
+      "cmake-args": ["-DRMW_UXRCE_TRANSPORT=custom", "-DRMW_UXRCE_MAX_NODES=1", "-DRMW_UXRCE_MAX_PUBLISHERS=2", "-DRMW_UXRCE_MAX_SUBSCRIPTIONS=1", "-DRMW_UXRCE_MAX_HISTORY=4"]
+    }
+  }
+}

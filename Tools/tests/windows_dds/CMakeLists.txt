@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22)
+project(micro_ros_windows_data_test LANGUAGES CXX)
+find_package(fastrtps 2 REQUIRED)
+find_package(fastcdr 2 REQUIRED)
+add_executable(MicroRosDataTest int32_test.cpp)
+target_compile_features(MicroRosDataTest PRIVATE cxx_std_14)
+target_link_libraries(MicroRosDataTest PRIVATE fastrtps fastcdr)
