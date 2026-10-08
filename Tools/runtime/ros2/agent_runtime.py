@@ -50,7 +50,7 @@ class AgentRuntime:
             raise ValueError('Agent port must be between 1 and 65535')
         if self.process is not None:
             if self.port != port:
-                raise RuntimeError('Stop this UI\'s Agent before changing the port')
+                raise RuntimeError('Stop this runtime\'s Agent before changing the port')
             return self.status()
         # A port check is only a prerequisite. Reuse requires an XRCE reply.
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as check:
@@ -81,7 +81,7 @@ class AgentRuntime:
 
     def stop(self):
         if self.process is None:
-            raise RuntimeError('External Agent is reused; this UI cannot stop it')
+            raise RuntimeError('External Agent is reused; this runtime cannot stop it')
         if self.process.poll() is None:
             self.process.terminate()
         self.state = 'stopping'

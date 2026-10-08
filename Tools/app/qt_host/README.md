@@ -1,5 +1,7 @@
 # Qt ROS 2 工作台
 
+无需 Qt 的部署请使用 [浏览器工作台](../web/README.md)：独立 HTTP / WebSocket 服务复用 ROS worker，浏览器或自定义前端负责显示和交互。本页仍描述原有 Qt 进程通信方式。
+
 `qt_ros2` 是 Qt 6 Widgets / C++17 上位机，支持 Windows 原生界面和 Linux 本地运行。按 `mcu_test/Tools` 的 `core → runtime → app` 结构设计，整个 Tools 只有一份主 CMakeLists 和两个构建 preset，不拷贝参考工程的私有通信协议及第三方库。
 
 ## 平台与运行方式

@@ -26,4 +26,4 @@ if [[ "$local_dds" == 1 ]]; then
     [[ -f "$FASTRTPS_DEFAULT_PROFILES_FILE" ]] || { echo 'DDS configuration file is missing' >&2; exit 2; }
     export FASTDDS_DEFAULT_PROFILES_FILE="$FASTRTPS_DEFAULT_PROFILES_FILE"
 fi
-exec python3 -u "$script_dir/worker.py"
+exec "${ROS_WORKER_PYTHON:-python3}" -u "$script_dir/worker.py" "${@:4}"

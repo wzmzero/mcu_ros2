@@ -1,5 +1,7 @@
 # 上位机与测试工具
 
+新增独立 ROS 2 WebSocket 服务与浏览器工作台，无需 Qt：Windows 浏览器通过 WebSocket 操作 WSL / Linux 中的 ROS 2，支持两板遥测、Topic / Service / Action、传感器、ROS 图和 Agent 管理。安装后执行 `bash Tools/scripts/web.sh`，或在 Windows 执行 `.\Tools\scripts\web.ps1`，浏览器打开 `http://localhost:8765`。依赖安装、协议和自定义前端接入见 [Web 工作台说明](app/web/README.md)。
+
 Qt 上位机已按 core / runtime / app 分层实现：Windows 原生界面 + WSL ROS 2 后端，连接时可自动启动/复用 WSL Agent；Linux 下使用本地后端和 Agent。构建、部署、两板 Topic / Service / Action 测试见 [Qt 工作台说明](app/qt_host/README.md)。Windows 可执行文件为 `Tools/build/windows/qt_ros2.exe`。
 
 两板原生 topic/service/action 测试使用 `python3 Tools/tests/test_mcu_protocols.py`，无需电脑 topic 转发节点。编译配置、接口和完整测试步骤见 [COMMUNICATION.md](../firmware/COMMUNICATION.md)。

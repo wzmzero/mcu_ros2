@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MCU · ROS 2 工作台</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/app.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <a class="brand" href="/" aria-label="MCU ROS 2 首页"><span class="brand-mark">M</span><span>MCU<span class="brand-sub">ROS 2 WORKSPACE</span></span></a>
+    <div class="nav-caption">工作空间</div>
+    <nav aria-label="页面导航">
+      <button class="nav-item selected" data-page="overview"><span>◈</span>设备与控制</button>
+      <button class="nav-item" data-page="sensors"><span>◎</span>传感器</button>
+      <button class="nav-item" data-page="graph"><span>⌘</span>ROS 图</button>
+      <button class="nav-item" data-page="logs"><span>≡</span>事件记录</button>
+    </nav>
+    <div class="connection-card">
+      <div class="eyebrow">连接设置</div>
+      <label for="endpoint">服务地址</label><input id="endpoint" type="url" spellcheck="false" aria-label="WebSocket 服务地址">
+      <label class="check"><input type="checkbox" id="auto-agent" checked>连接时启动 / 复用 Agent</label>
+      <button id="connect" class="primary full">连接工作台</button>
+      <p id="connection-note">后端未连接</p>
+    </div>
+    <div class="sidebar-footer"><span class="dot" id="sidebar-dot"></span><span id="sidebar-status">离线</span><span class="version">v1.0</span></div>
+  </aside>
+  <main>
+    <header><div class="breadcrumb">工作空间 <span>/</span> <span id="page-label">设备与控制</span></div><div class="badge" id="connection-state">未连接</div></header>
+    <section class="page-heading"><div><div class="eyebrow">MCU CONTROL CENTER</div><h1 id="page-title">设备与控制</h1><p id="page-description">查看设备状态，直接与每块板卡交互。</p></div><div class="clock" id="clock"></div></section>
+    <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+    <section class="page" id="overview">
+      <div class="device-grid" id="devices"></div>
+      <section class="panel agent-panel"><div><div class="panel-title">micro-ROS Agent <span class="badge" id="agent-state">未检查</span></div><p id="agent-detail">连接后检查通信服务</p></div><div class="inline"><label for="agent-port">UDP 端口</label><input id="agent-port" type="number" min="1" max="65535" value="8888"><button id="agent-start" data-ros>启动 / 检查</button><button id="agent-stop" data-ros disabled>停止</button></div></section>
+      <div class="section-heading"><h2>通信控制</h2><div class="inline"><label for="board">目标板卡</label><select id="board"><option value="esp32s3">ESP32-S3</option><option value="stm32">STM32</option></select></div></div>
+      <div class="control-grid">
+        <section class="panel"><div class="panel-kicker">01 / TOPIC</div><h3>发布指令</h3><p>发送 Int32，观察设备的 Echo 回传。</p><form id="publish-form"><label for="command-value">指令数值</label><input id="command-value" type="text" inputmode="numeric" value="42" required><button class="primary" data-ros>发布 command <span>↗</span></button></form><output id="publish-result">等待发布</output></section>
+        <section class="panel"><div class="panel-kicker">02 / SERVICE</div><h3>请求求和</h3><p>AddTwoInts · 支持完整有符号 64 位整数。</p><form id="service-form"><div class="operand-grid"><div><label for="operand-a">数值 A</label><input id="operand-a" type="text" inputmode="numeric" value="20" required></div><span>+</span><div><label for="operand-b">数值 B</label><input id="operand-b" type="text" inputmode="numeric" value="22" required></div></div><button class="primary" data-ros>调用 Service <span>↗</span></button></form><output id="service-result">等待请求</output></section>
+        <section class="panel"><div class="panel-kicker">03 / ACTION</div><h3>执行序列任务</h3><p>Fibonacci · 固件接受长度 2–10。</p><form id="action-form"><label for="order">序列长度</label><input id="order" type="number" min="0" max="100" value="6" required><div class="action-buttons"><button class="primary" id="action-send" data-ros>发送目标 <span>↗</span></button><button type="button" id="cancel" disabled>取消</button></div></form><output id="action-result">等待目标</output></section>
+      </div>
+    </section>
+    <section class="page" id="sensors" hidden><section class="panel"><div class="section-heading"><h2>传感器订阅</h2><button id="sensor-refresh" data-ros>刷新话题</button></div><p>选择 sensor_msgs 标准话题查看实时字段。预览最多 10 Hz，长数组显示前 64 项。</p><div class="inline sensor-controls"><select id="sensor-topic" aria-label="传感器话题"><option value="">暂无传感器话题</option></select><button class="primary" id="subscribe" data-ros>订阅</button></div><div id="sensor-meta" class="muted">尚未订阅；当前 MCU 没有物理传感器发布时，列表为空。</div><pre id="sensor-view">等待传感器数据</pre></section></section>
+    <section class="page" id="graph" hidden><section class="panel"><div class="section-heading"><h2>节点与话题</h2><button id="graph-refresh" data-ros>刷新 ROS 图</button></div><p id="graph-summary">连接后查看 ROS 2 网络中的节点、话题与服务。</p><h3>节点</h3><div id="nodes" class="node-list"></div><h3>Topics</h3><div class="table-scroll"><table><thead><tr><th>名称</th><th>消息类型</th></tr></thead><tbody id="topics"></tbody></table></div><h3>Services</h3><div class="table-scroll"><table><thead><tr><th>名称</th><th>服务类型</th></tr></thead><tbody id="services"></tbody></table></div></section></section>
+    <section class="page" id="logs" hidden><section class="panel"><div class="section-heading"><h2>事件记录</h2><div class="inline"><button id="export-log">导出</button><button id="clear-log">清空</button></div></div><p>保留最近 200 条事件。</p><pre id="log-view" aria-live="off">尚无事件</pre></section></section>
+    <footer><span>MCU ROS 2 工作台</span><span id="domain-info">等待后端连接</span></footer>
+  </main>
+</body>
+</html>

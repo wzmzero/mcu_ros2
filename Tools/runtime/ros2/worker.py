@@ -1,4 +1,4 @@
-"""ROS 2 runtime for the Qt host. JSON-lines stdin/stdout; diagnostics on stderr.
+"""UI-independent ROS 2 runtime. JSON-lines stdin/stdout; diagnostics on stderr.
 
 All ROS callbacks and commands run on one executor thread. The stdin thread only
 queues commands. This process never forwards MCU topics between boards.
@@ -36,7 +36,7 @@ def emit(data):
 
 class Worker:
     def __init__(self):
-        self.node = rclpy.create_node('qt_ros2_' + uuid.uuid4().hex[:8])
+        self.node = rclpy.create_node('mcu_ros2_' + uuid.uuid4().hex[:8])
         self.commands = queue.Queue(maxsize=256)
         self.eof = threading.Event()
         self.subscriptions = []
@@ -45,7 +45,7 @@ class Worker:
         self.actions = {}
         self.pending = {}
         self.goals = {}
-        self.sensor = None
+        self.sensors = {}
         self.latest_sensors = {}
         self.last_sensor_flush = 0.0
         self.running = True
@@ -134,7 +134,7 @@ class Worker:
             emit({'event': 'action_feedback', 'id': ident,
                   'sequence': list(message.feedback.sequence)})
 
-    def sensor_received(self, topic, typename, message):
+    def sensor_received(self, topic, typename, message, client=''):
         # Coalesce high-rate messages to 10 Hz; binary/image previews are bounded.
         try:
             def bounded(value):
@@ -149,7 +149,8 @@ class Worker:
                 if isinstance(value, int) and abs(value) > 2**53:
                     return str(value)
                 return value
-            self.latest_sensors[topic] = {'event': 'sensor', 'topic': topic, 'type': typename,
+            self.latest_sensors[(client, topic)] = {'event': 'sensor', 'topic': topic, 'type': typename,
+                                          **({'_client': client} if client else {}),
                                           'data': bounded(message_to_ordereddict(message))}
         except Exception as exc:
             print(f'Sensor decode failed: {exc}', file=sys.stderr, flush=True)
@@ -159,6 +160,23 @@ class Worker:
             if not isinstance(c.get('id'), str) or not c['id']:
                 raise ValueError('Request ID required')
             op = c.get('op')
+            if op == 'release_client':
+                client = c['_client']
+                if not isinstance(client, str) or not client:
+                    raise ValueError('Client identifier required')
+                subscription = self.sensors.pop(client, None)
+                if subscription is not None:
+                    self.node.destroy_subscription(subscription)
+                self.latest_sensors = {k: v for k, v in self.latest_sensors.items() if k[0] != client}
+                for ident, item in list(self.pending.items()):
+                    if item['command'].get('_client') == client:
+                        if ident in self.goals:
+                            self.goals[ident].cancel_goal_async()
+                        if 'service_future' in item:
+                            ros_client, future = item['service_future']
+                            ros_client.remove_pending_request(future)
+                        self.finish(ident, error='Client disconnected')
+                return
             if op == 'stop':
                 self.running = False
                 self.response(c, {'stopped': True})
@@ -177,16 +195,18 @@ class Worker:
                 return
             if op == 'subscribe':
                 topic, typename = c['topic'], c['type']
+                client = c.get('_client', '')
                 if not typename.startswith('sensor_msgs/msg/'):
                     raise ValueError('Select a standard sensor_msgs topic')
                 cls = get_message(typename)
                 # Construct first; an invalid selection leaves the old subscription intact.
                 new = self.node.create_subscription(cls, topic,
-                    lambda msg: self.sensor_received(topic, typename, msg), qos_profile_sensor_data)
-                if self.sensor is not None:
-                    self.node.destroy_subscription(self.sensor)
-                self.sensor = new
-                self.latest_sensors.clear()
+                    lambda msg: self.sensor_received(topic, typename, msg, client), qos_profile_sensor_data)
+                old = self.sensors.get(client)
+                if old is not None:
+                    self.node.destroy_subscription(old)
+                self.sensors[client] = new
+                self.latest_sensors = {k: v for k, v in self.latest_sensors.items() if k[0] != client}
                 self.response(c, {'topic': topic, 'type': typename})
                 return
             board = c.get('board')
@@ -222,6 +242,9 @@ class Worker:
                     feedback_callback=lambda msg: self.feedback(ident, msg)).add_done_callback(
                         lambda f: self.goal_done(ident, f))
             elif op == 'cancel':
+                item = self.pending.get(c['goal_id'])
+                if item is None or item['command'].get('_client', '') != c.get('_client', ''):
+                    raise RuntimeError('Goal does not belong to this client')
                 goal = self.goals.get(c['goal_id'])
                 if goal is None:
                     raise RuntimeError('No accepted goal to cancel')
@@ -267,7 +290,7 @@ class Worker:
                         self.finish(ident, error='ROS request timed out (12 seconds)')
         finally:
             try:
-                # Cancel this UI's goals while its Agent is still available.
+                # Cancel this runtime's goals while its Agent is still available.
                 if rclpy.ok():
                     for goal in list(self.goals.values()):
                         goal.cancel_goal_async()
