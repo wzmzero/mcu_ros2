@@ -1,8 +1,0 @@
-# Apply on top of sdkconfig.defaults using a separate SDKCONFIG path.
-CONFIG_APP_ROS_WIFI_UDP=y
-CONFIG_ESP_CONSOLE_UART_DEFAULT=y
-CONFIG_ESP_CONSOLE_SECONDARY_NONE=y
-CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
-CONFIG_APP_ROS_AGENT_IP="192.168.1.100"
-CONFIG_APP_ROS_AGENT_PORT=8888
-# Set SSID/password and the reachable Agent address in menuconfig.

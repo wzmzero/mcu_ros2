@@ -297,6 +297,7 @@ menu "TinyUSB Stack"
     menu "Communication Device Class (CDC)"
         config TINYUSB_CDC_ENABLED
             bool "Enable TinyUSB CDC feature"
+            depends on !APP_ROS_USB_RNDIS_UDP
             default n
             help
                 Enable TinyUSB CDC feature.
@@ -400,12 +401,15 @@ menu "TinyUSB Stack"
 
             config TINYUSB_NET_MODE_ECM_RNDIS
                 bool "ECM/RNDIS"
+                depends on APP_ROS_USB_RNDIS_UDP
 
             config TINYUSB_NET_MODE_NCM
                 bool "NCM"
+                depends on !APP_ROS_USB_RNDIS_UDP
 
             config TINYUSB_NET_MODE_NONE
                 bool "None"
+                depends on !APP_ROS_USB_RNDIS_UDP
         endchoice
 
         config TINYUSB_NCM_OUT_NTB_BUFFS_COUNT

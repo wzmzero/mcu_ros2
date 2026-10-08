@@ -21,7 +21,7 @@
 #include <string.h>
 
 #if !CFG_TUD_ECM_RNDIS || CFG_TUD_NCM || CFG_TUD_CDC
-#error "USB RNDIS requires ECM/RNDIS enabled, NCM and CDC disabled; use sdkconfig.usb-network.defaults."
+#error "USB RNDIS requires ECM/RNDIS enabled, NCM and CDC disabled; check menuconfig."
 #endif
 
 typedef struct { uint16_t length; uint8_t data[]; } usb_packet_t;

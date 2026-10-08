@@ -43,17 +43,15 @@ def main():
     parser.add_argument('--config', type=Path, default=ROOT / 'sdkconfig')
     parser.add_argument('--output', type=Path)
     parser.add_argument('--menuconfig', action='store_true')
-    parser.add_argument('--seed', action='append', default=[])
     parser.add_argument('--set', action='append', default=[], dest='settings')
     args = parser.parse_args()
     os.environ['KCONFIG_CONFIG'] = str(args.config.resolve())
     os.environ['srctree'] = str(ROOT)
     kconfiglib = dependency('kconfiglib', 'kconfiglib==14.1.0')
-    config = kconfiglib.Kconfig(str(ROOT / 'Kconfig'), warn_to_stderr=True)
-    existed = args.config.is_file()
-    if existed:
+    config = kconfiglib.Kconfig(str(ROOT / 'Src/Kconfig.projbuild'), warn_to_stderr=True)
+    if args.config.is_file():
         config.load_config(str(args.config))
-    for item in (args.seed if not existed else []) + args.settings:
+    for item in args.settings:
         name, value = item.split('=', 1)
         if name not in config.syms or not config.syms[name].set_value(value):
             raise ValueError(f'Invalid Kconfig setting: {name}')
@@ -75,22 +73,15 @@ def main():
         validate(config)
         args.output.mkdir(parents=True, exist_ok=True)
         config.write_autoconf(str(args.output / 'sdkconfig.h'))
-        mappings = {
-            'STM32_USB_RNDIS': 'ROS_TRANSPORT_USB_RNDIS', 'ROS_DOMAIN_ID': 'ROS_DOMAIN_ID',
-            'STM32_ROS_UART_BAUD': 'ROS_UART_BAUD', 'STM32_USB_HSE_HZ': 'USB_HSE_HZ',
-            'STM32_USB_MCU_IP': 'USB_MCU_IP', 'STM32_USB_HOST_IP': 'USB_HOST_IP',
-            'STM32_ROS_AGENT_IP': 'ROS_AGENT_IP', 'STM32_ROS_AGENT_PORT': 'ROS_AGENT_PORT',
-        }
         entries = []
-        for name, symbol in mappings.items():
-            sym = config.syms[symbol]
+        for sym in config.unique_defined_syms:
             if not sym.visibility:
                 continue
             value = sym.str_value
             if sym.type == kconfiglib.BOOL:
                 value = 'ON' if value == 'y' else 'OFF'
             # Export only validated integers, booleans and numeric IPv4 strings.
-            entries.append(f'set({name} [=[{value}]=] CACHE STRING "From STM32 sdkconfig" FORCE)')
+            entries.append(f'set(CONFIG_{sym.name} [=[{value}]=])')
         path = args.output / 'sdkconfig.cmake'
         content = '\n'.join(entries) + '\n'
         if not path.exists() or path.read_text(encoding='utf-8') != content:

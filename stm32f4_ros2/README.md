@@ -2,22 +2,28 @@
 
 STM32F407VET6 + FreeRTOS + Jazzy micro-ROS。公共应用位于 `../firmware/app`，本工程 `Src` 提供硬件和传输适配。可以在编译前选择 USART1 DMA 或原生 USB RNDIS + UDP。
 
-## Windows 构建与 menuconfig
+## 构建与 menuconfig
 
-安装 STM32CubeCLT，将其 CMake、Ninja、GNU-tools-for-STM32 的 `bin` 加入 PATH；需要 Python 3 和 pip。在 Windows PowerShell 或 CLion 的终端中进入本目录：
+Windows 安装 STM32CubeCLT，将其 CMake、Ninja、GNU-tools-for-STM32 的 `bin` 加入 PATH；需要 Python 3 和 pip。WSL 使用 Linux 的 CMake、Ninja、ARM GCC 和 Python，不使用 Windows 的构建缓存。在 Windows PowerShell、CLion 或 WSL 终端中进入本目录，均使用下面的命令：
 
 ```powershell
 cmake --preset Release
-cmake --build build/Release --target menuconfig
+cmake --build --preset Release --target menuconfig
 cmake --build --preset Release
-cmake --build build/Release --target flash_swd
+cmake --build --preset Release --target flash_swd
 ```
 
 菜单采用 [Kconfiglib](https://github.com/ulfalizer/Kconfiglib)，操作与 ESP-IDF menuconfig 类似：方向键移动，Enter 进入/编辑，Space 选择，S 保存，Q 退出。可配置传输方式、ROS 域、串口波特率；选择 USB RNDIS 后还可配置晶振频率、MCU/主机地址及 Agent 地址、端口。首次运行自动把 Kconfiglib 和 Windows 菜单所需的 windows-curses 安装到本工程 `.tools/menuconfig`，不需要 Linux 环境。
 
 配置保存到 `sdkconfig`，构建目录生成 `generated/sdkconfig.h` 和 CMake 参数。保存菜单后直接 build，会自动重新配置并编译对应传输，不需要清空 build。`board.h` 引入生成的头文件，应用可以使用 `CONFIG_*` 宏。
 
-`Debug` / `Release` 共享 `sdkconfig`，第一次默认为 UART。另提供 `USB-Debug` / `USB-Release`，使用独立的 `sdkconfig.usb`，第一次默认为 USB RNDIS。**已有 sdkconfig 的选择优先于 preset 和 `-D` 参数**，以后用菜单修改。配置文件是本机配置，不提交 Git。
+只提供 `Debug`、`Release` 两个预设，表示优化和调试级别；两者都读取同一个 `sdkconfig`，第一次默认为 UART。UART / USB、ROS 域和网络参数统一在菜单中选择，不通过预设或 CMake `-D` 参数配置。菜单定义放在 `Src/Kconfig.projbuild`，与 ESP32 的应用配置位置一致。配置文件是本机配置，不提交 Git。配置生成、FreeRTOS、micro-ROS 与网络源码选择统一位于 `cmake/micro_ros.cmake`。
+
+本工程顶层 `Makefile` 已移除。固件使用 CMake + Ninja，静态库生成使用 `scripts/build_micro_ros.sh`；该脚本直接提供编译参数给 micro-ROS 工具，不依赖顶层 Makefile。第三方工具中保留的官方 Makefile 教程属于其原始用法，本工程按本说明构建。
+
+构建缓存自动按宿主系统隔离：Windows 放在 `build/Windows/<preset>`，WSL 放在 `build/Linux/<preset>`。因此在两边运行相同的 `cmake --preset Release` 不会再混用 `C:/...` 与 `/mnt/c/...` 路径。原来的 `build/Release` 和 `build/USB-*` 不再使用，不需要删除或修改旧缓存。
+
+也可在第一次 CMake 配置之前直接打开菜单：Windows 执行 `python scripts/menuconfig.py --menuconfig`，WSL 执行 `python3 scripts/menuconfig.py --menuconfig`。
 
 不通过菜单修改参数的示例：
 
@@ -26,16 +32,11 @@ python scripts/menuconfig.py --config sdkconfig --set ROS_DOMAIN_ID=1
 cmake --build --preset Release
 ```
 
-产物为 `build/<preset>/stm32f4_ros2.elf`、`.bin`、`.hex`，链接地址 `0x08000000`。`flash_swd` 在找到 STM32CubeProgrammer CLI 后可用，需要 ST-Link。
+产物为 `build/<host>/<preset>/stm32f4_ros2.elf`、`.bin`、`.hex`，链接地址 `0x08000000`。`flash_swd` 在找到当前系统可执行的 STM32CubeProgrammer CLI 后可用，需要 ST-Link；使用 Windows CubeCLT 时在 Windows 终端烧录。
 
 ## USB RNDIS 模式
 
-```powershell
-cmake --preset USB-Release
-cmake --build build/USB-Release --target menuconfig
-cmake --build --preset USB-Release
-cmake --build build/USB-Release --target flash_swd
-```
+在 menuconfig 的 `micro-ROS transport` 中选择 `Native USB RNDIS + UDP`，保存后执行 `cmake --build --preset Release` 即可构建 USB 固件。调试时使用 `Debug` 预设，同样读取该选择。
 
 连接 MCU 原生 USB：PA11 为 D-，PA12 为 D+；CH340 和 ST-Link 接口不能提供 RNDIS。默认外部晶振 8 MHz，沿用 `C:\Users\admin\Desktop\mcu_test` 的板级参考。若实板晶振不同，先在菜单中修改。USB 模式通过 PLL 配置 CPU 168 MHz、USB 48 MHz。
 
@@ -108,6 +109,6 @@ bash scripts/build_micro_ros.sh jazzy
 
 默认 `MICRO_ROS_DISTRO=jazzy`；其他发行版生成后用 `-DMICRO_ROS_DISTRO=<发行版>` 选择，`MICROROS_ROOT` 可以指向包含 `libmicroros.a` 与 `include/rcl/rcl.h` 的自定义目录。依赖来源记录在各第三方目录的 `UPSTREAM.json`，公共逻辑修改位置见 [仓库 README](../README.md)。
 
-2026-10-08：Windows 的 menuconfig 已打开验证；UART / USB 的 Debug 和 Release 构建通过，菜单保存后自动重新配置并切换传输、无效参数检查通过。USB Release 使用 Flash 100,552 B、主 SRAM 51,440 B、CCM 中预留 65,536 B 堆；UART Release 主 SRAM 92,824 B。DHCP 和 RNDIS 边界、错误报文及随机输入测试通过 AddressSanitizer / UndefinedBehaviorSanitizer 检查。TinyUSB 的接收偏移/长度检查补丁记录在 `PATCHES.md`。
+2026-10-08：Windows、WSL 的 menuconfig 已打开验证；UART / USB 在两边同一个 Debug、Release 预设中切换构建通过，菜单保存后自动重新配置、无效参数检查通过。Windows Release 的 USB 模式使用 Flash 100,552 B、主 SRAM 51,440 B、CCM 中预留 65,536 B 堆；UART 模式主 SRAM 92,824 B。记录见本机 `build/menuconfig_validation.json`。DHCP 和 RNDIS 边界、错误报文及随机输入测试通过 AddressSanitizer / UndefinedBehaviorSanitizer 检查。TinyUSB 的接收偏移/长度检查补丁记录在 `PATCHES.md`。
 
 USB Release 已通过 ST-Link 烧录并校验；目前电脑尚未枚举到 STM32 原生 USB 网卡，STM32 的 DHCP、ping、heartbeat/echo 实板链路待接上原生 USB 后验证。现有 STM32CubeMX `.ioc` 尚未同步手写 UART/RTOS/USB 集成，重新生成前应合并相关用户代码。

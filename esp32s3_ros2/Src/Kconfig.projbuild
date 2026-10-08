@@ -14,6 +14,9 @@ config APP_ROS_WIFI_UDP
     bool "Wi-Fi + lwIP UDP"
 config APP_ROS_USB_RNDIS_UDP
     bool "USB OTG RNDIS network + lwIP UDP"
+    help
+        Selecting this transport enables the ECM/RNDIS TinyUSB driver and
+        disables competing CDC/NCM interfaces. Set the Agent address below.
 endchoice
 if APP_ROS_WIFI_UDP || APP_ROS_USB_RNDIS_UDP
 config APP_ROS_AGENT_IP

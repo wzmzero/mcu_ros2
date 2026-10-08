@@ -74,5 +74,11 @@
   },
   "repository": "https://github.com/espressif/esp-usb/tree/master/device/esp_tinyusb",
   "upstream_commit": "7963dbeaddee8798cae953cbcd2f1dc48c7589bf",
-  "version": "2.4.0"
+  "version": "2.4.0",
+  "local_patches": [
+    {
+      "file": "Kconfig",
+      "description": "Bind TinyUSB network mode and CDC availability to the application RNDIS choice so one sdkconfig can switch transports without mode-specific defaults."
+    }
+  ]
 }

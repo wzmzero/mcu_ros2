@@ -6,11 +6,13 @@ Wi-Fi UDP、USB RNDIS 网络模式、WSL Agent 启动和网络收发测试见 [N
 
 公共 micro-ROS 应用位于 ../firmware/app，与 STM32 编译同一份源码。本工程支持 USB Serial/JTAG、UART1、Wi-Fi UDP 和 USB RNDIS UDP；网络模式共用 firmware/transport/udp_transport.c，不使用参考工程的旧消息协议。USB RNDIS 使用本工程内的 TinyUSB 运行时源文件。
 
+所有传输统一使用项目根目录的一个 `sdkconfig`，在 `idf.py -DMICROROS_PREPARE=ON menuconfig` 中选择；菜单定义位于 `Src/Kconfig.projbuild`。`sdkconfig.defaults` 仅提供初始默认值，不再使用 Wi-Fi/USB 各自的配置文件或默认值文件。旧本地配置保留在 `build/config_backup`，当前主配置选择 USB RNDIS。RNDIS 选择会自动联动 TinyUSB 网络驱动。
+
 - 默认芯片原生 USB Serial/JTAG，GPIO19 D-、GPIO20 D+；连接开发板标为 USB/OTG 的原生 USB 插口，不是 UART 桥插口。
 - 可在 menuconfig 的 ESP32-S3 ROS 2 application 中选择 UART1：默认 GPIO17 TX、GPIO18 RX，外接 USB-UART，115200 8N1。
 - 16 MB Flash 默认配置来自参考板；烧录前按实际模组容量调整。示例不要求 PSRAM，默认关闭。
 - micro-ROS 任务固定在 CPU0，栈大小 16 KiB（ESP-IDF 参数单位为字节）。
-- 串口传输模式关闭控制台和 bootloader 日志，USB 数据口仅传 XRCE 帧。Wi-Fi 配置启用 UART0 诊断日志，可从 USB-UART 插口查看连接结果。
+- 各模式默认 UART0 115200 诊断，原生 USB 或 UART1 数据口仅传 XRCE 帧；bootloader 日志关闭。旧 sdkconfig 保留已有控制台选择，可在 menuconfig 中修改。
 - 节点 /esp32s3/esp32s3；heartbeat 每秒发布 Int32；command 原值回传 echo。
 - Agent 未启动时持续等待；断线后销毁实体并重建。默认 ROS_DOMAIN_ID=0。
 - app-colcon.meta 使用 custom transport，支持串口 framing 和 UDP 数据包模式，资源配置为 1 节点、2 发布者、1 订阅者。
@@ -18,6 +20,8 @@ Wi-Fi UDP、USB RNDIS 网络模式、WSL Agent 启动和网络收发测试见 [N
 修改节点/收发/重连逻辑请编辑 ../firmware/app/micro_ros.c；心跳与超时参数编辑 ../firmware/app/micro_ros_config.h。本工程 Src/micro_ros_platform.c 只提供 ESP-IDF 初始化、配置、时间和延时。
 
 ## Windows + WSL（与 STM32 相同的分工）
+
+2026-10-08：单一配置结构验证通过；ESP-IDF 四种传输的配置生成、RNDIS 依赖联动检查通过。WSL 生成 74 个包、1,695 个对象的匹配库，Windows 完整构建 USB RNDIS 固件通过，bin 为 394,224 B，库指纹和分区检查通过。记录见本机 `build/single_config_validation.json`；本次未重新烧录。
 
 Windows 使用已有 ESP-IDF 编译、烧录应用；WSL 生成 Xtensa micro-ROS 静态库并运行 Agent/ROS 2。WSL 复用 Windows ESP-IDF 的源码、头文件和配置，不克隆 Linux ESP-IDF，也不创建 Linux IDF Python 环境。首次生成库时，仅下载与 Windows GCC 完全相同发行版本的 Linux Xtensa 编译器，保存到 WSL 的 `~/.cache/mcu_ros2/espressif`。
 

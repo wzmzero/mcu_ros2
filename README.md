@@ -16,7 +16,7 @@ mcu_ros2/
       tools/             官方 STM32 移植及库生成工具
       lib/jazzy/         ARM 静态库和配套 include
     scripts/             STM32 静态库生成及 menuconfig
-    Kconfig              编译前选择通信、ROS 域及 USB 网络参数
+    Src/Kconfig.projbuild 编译前选择通信、ROS 域及 USB 网络参数
   esp32s3_ros2/
     Src/                 app_main、ESP-IDF 平台适配、USB/UART/Wi-Fi 网络
     components/micro_ros_espidf_component/
@@ -40,7 +40,9 @@ mcu_ros2/
 
 ESP32 也可选择 Wi-Fi UDP 或 USB RNDIS UDP，配置、构建和测试见 [网络模式说明](esp32s3_ros2/NETWORK.md)。网络 Agent 使用 `bash Tools/scripts/agent.sh udp 8888 jazzy`。
 
-STM32 可通过 `cmake --build build/Release --target menuconfig` 选择 UART 或 USB RNDIS UDP，默认 USB 地址为 MCU 192.168.8.1、主机 192.168.8.2，与 ESP32 的 192.168.7.0/24 分开。菜单在 Windows 原生运行，完整命令见 [STM32 README](stm32f4_ros2/README.md)。
+每个平台只使用一个本机 `sdkconfig`，应用菜单统一位于各自的 `Src/Kconfig.projbuild`。ESP32 的 `sdkconfig.defaults` 是初始默认值，通信方式在 menuconfig 中切换，不再按 Wi-Fi、USB 分拆配置。
+
+STM32 只提供 Debug、Release 两个预设，通过 `cmake --build --preset Release --target menuconfig` 选择 UART 或 USB RNDIS UDP。默认 USB 地址为 MCU 192.168.8.1、主机 192.168.8.2，与 ESP32 的 192.168.7.0/24 分开。Windows 与 WSL 构建目录自动分开，共享同一个 `sdkconfig`，完整命令见 [STM32 README](stm32f4_ros2/README.md)。
 
 
 ## 公共代码改哪里
@@ -58,7 +60,7 @@ heartbeat、command、echo 使用相对话题名，由平台命名空间展开�
 
 ## 构建
 
-STM32：在 stm32f4_ros2 执行 `cmake --preset Release`、`cmake --build build/Release --target menuconfig`、`cmake --build --preset Release`。本地已有 Jazzy 静态库可直接使用；新检出工程需要先按 STM32 README 生成库。
+STM32：在 stm32f4_ros2 执行 `cmake --preset Release`、`cmake --build --preset Release --target menuconfig`、`cmake --build --preset Release`。本地已有 Jazzy 静态库可直接使用；新检出工程需要先按 STM32 README 生成库。
 
 ESP32：与 STM32 相同，可在 WSL 生成库、Windows 构建和烧录应用，不需要在 WSL 安装 ESP-IDF。先在激活的 Windows ESP-IDF 终端执行 `idf.py -DMICROROS_PREPARE=ON reconfigure`，在 WSL 中执行 `bash scripts/build_micro_ros.sh`，再在 Windows 执行 `idf.py -DMICROROS_PREPARE=OFF build`。以后只修改应用代码直接 `idf.py build`。详细命令和依赖见 [ESP32 README](esp32s3_ros2/README.md)。
 
