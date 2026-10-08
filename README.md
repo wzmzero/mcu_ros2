@@ -42,7 +42,7 @@ ESP32 也可选择 Wi-Fi UDP 或 USB RNDIS UDP，配置、构建和测试见 [�
 
 每个平台只使用一个本机 `sdkconfig`，应用菜单统一位于各自的 `Src/Kconfig.projbuild`。ESP32 的 `sdkconfig.defaults` 是初始默认值，通信方式在 menuconfig 中切换，不再按 Wi-Fi、USB 分拆配置。
 
-STM32 只提供 Debug、Release 两个预设，通过 `cmake --build --preset Release --target menuconfig` 选择 UART 或 USB RNDIS UDP。默认 USB 地址为 MCU 192.168.8.1、主机 192.168.8.2，与 ESP32 的 192.168.7.0/24 分开。Windows 与 WSL 构建目录自动分开，共享同一个 `sdkconfig`，完整命令见 [STM32 README](stm32f4_ros2/README.md)。
+STM32 只提供 Debug、Release 两个预设，通过 `cmake --build --preset Release --target menuconfig` 选择 UART 或 USB RNDIS UDP。默认 USB 地址为 MCU 192.168.7.3、主机及 Agent 192.168.7.4；ESP32 使用 MCU .1、主机 .2。两张 USB 网卡同时连接时需要为两个 MCU 指定 /32 路由。Windows 与 WSL 构建目录自动分开，共享同一个 `sdkconfig`，完整构建和网络配置命令见 [STM32 README](stm32f4_ros2/README.md)。
 
 
 ## 公共代码改哪里

@@ -52,7 +52,7 @@ WSL 默认 NAT 的私有地址通常不能直接被 Wi-Fi MCU 访问。本机使
 
 连接芯片原生 USB/OTG 接口（GPIO19 D-、GPIO20 D+），不是 USB-UART 插口。RNDIS 占用 USB OTG PHY，运行时原生 USB Serial/JTAG 不可用。需要从原生 USB 下载时，按住 BOOT、短按 RESET、松开 BOOT，进入 ROM 下载并选择实际 COM 端口。也可通过开发板的 UART 桥烧录。
 
-固件枚举为 RNDIS 设备（303A:4008）。MCU 固定为 192.168.7.1/24，默认启用 DHCP，为 USB 主机提供 192.168.7.2–3；不发布默认网关和 DNS，不需要路由器。STM32 的 USB 子网使用 192.168.8.0/24，两块板可以同时接入。
+固件枚举为 RNDIS 设备（303A:4008）。MCU 固定为 192.168.7.1/24，默认启用 DHCP，为 USB 主机提供 192.168.7.2–3；不发布默认网关和 DNS，不需要路由器。STM32 使用 MCU 192.168.7.3、主机及 Agent 192.168.7.4。两块板同时使用时，ESP32 的电脑网卡固定为 .2（避免 DHCP 分配 .3），并为两个 MCU 添加各自 USB 网卡的 /32 路由，详见 [STM32 网络配置](../stm32f4_ros2/README.md#usb-rndis-模式)。
 
 本机优先让 Windows 接管 RNDIS 网卡，WSL mirrored 网络复用该网络，不执行 usbipd attach。先确认 Windows 网卡是否自动获得 192.168.7.2/24：
 
@@ -64,7 +64,7 @@ ping 192.168.7.1
 仅在未使用 DHCP 时，为实际 RNDIS 网卡手动设置 192.168.7.2/24，不设置默认网关。两块板同时使用时，管理员 PowerShell 放行两个 MCU 地址：
 
 ```powershell
-.\Tools\scripts\configure_agent_firewall.ps1 -Target wsl -McuAddress 192.168.7.1,192.168.8.1 -Port 8888
+.\Tools\scripts\configure_agent_firewall.ps1 -Target wsl -McuAddress 192.168.7.1,192.168.7.3 -Port 8888
 ```
 
 Windows 原生 Agent 也可以直接使用该网卡，见 [Tools/README.md](../Tools/README.md)。

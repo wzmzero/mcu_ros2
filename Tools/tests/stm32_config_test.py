@@ -22,6 +22,11 @@ with tempfile.TemporaryDirectory(prefix='stm32-kconfig-') as directory:
     run()
     assert 'CONFIG_ROS_TRANSPORT_USB_RNDIS [=[OFF]=]' in (output / 'sdkconfig.cmake').read_text()
     assert '#define CONFIG_ROS_TRANSPORT_UART 1' in (output / 'sdkconfig.h').read_text()
+    run('ROS_TRANSPORT_USB_RNDIS=y')
+    header = (output / 'sdkconfig.h').read_text()
+    assert '#define CONFIG_USB_MCU_IP "192.168.7.3"' in header
+    assert '#define CONFIG_USB_HOST_IP "192.168.7.4"' in header
+    assert '#define CONFIG_ROS_AGENT_IP "192.168.7.4"' in header
     run('ROS_TRANSPORT_USB_RNDIS=y', 'USB_MCU_IP=192.168.8.10',
         'USB_HOST_IP=192.168.8.20', 'ROS_AGENT_IP=192.168.8.20', 'ROS_AGENT_PORT=9999')
     header = (output / 'sdkconfig.h').read_text()

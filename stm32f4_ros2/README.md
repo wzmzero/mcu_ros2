@@ -42,18 +42,49 @@ cmake --build --preset Release
 
 | 参数 | 默认值 |
 | --- | --- |
-| MCU 地址 | 192.168.8.1/24 |
-| Windows USB 网卡地址，板端 DHCP 分配 | 192.168.8.2/24 |
-| Agent 地址、端口 | 192.168.8.2:8888 |
+| MCU 地址 | 192.168.7.3/24 |
+| Windows USB 网卡地址，板端 DHCP 分配 | 192.168.7.4/24 |
+| Agent 地址、端口 | 192.168.7.4:8888 |
 | ROS_DOMAIN_ID | 0 |
 
-STM32 使用 192.168.8.0/24，ESP32 原生 USB 使用 192.168.7.0/24，避免两块板同时连接时路由冲突。DHCP 不发布默认网关和 DNS。Windows USB 网卡应保持自动获取地址，也可以按表手动设置。
+ESP32 使用 MCU 192.168.7.1、电脑 USB 网卡 192.168.7.2；STM32 使用 MCU 192.168.7.3、电脑 USB 网卡 192.168.7.4。电脑有两张独立 USB 网卡，因此 STM32 的 Agent 地址填写 .4，ESP32 填写 .2；同一个监听 0.0.0.0:8888 的 Agent 可以接收两块板的数据。STM32 DHCP 不发布默认网关和 DNS，其 USB 网卡保持自动获取地址即可。已有 sdkconfig 不会被菜单默认值覆盖，需要在 menuconfig 修改 MCU、主机 DHCP、Agent 三个地址。
+
+两块板同时使用时，ESP32 的电脑 USB 网卡应固定为 192.168.7.2/24、不设置网关或 DNS。ESP-IDF 当前的 DHCP 地址池要求至少两个地址，ESP32 固件仍提供 .2–.3；电脑端使用静态 .2，避免 DHCP 分配到 STM32 的 .3。STM32 的电脑网卡通过 DHCP 获取 .4。
+
+两张 USB 网卡同属 /24，仅区分 IP 还不能保证出站网卡正确。接上两块板并确认电脑具有 .2、.4 后，在**管理员 PowerShell**添加每块 MCU 的 /32 直连路由（命令可重复执行）：
+
+```powershell
+$links = @(
+    @{ HostIp = '192.168.7.2'; McuIp = '192.168.7.1' },
+    @{ HostIp = '192.168.7.4'; McuIp = '192.168.7.3' }
+)
+foreach ($link in $links) {
+    $nic = @(Get-NetIPAddress -AddressFamily IPv4 -IPAddress $link.HostIp -ErrorAction SilentlyContinue)
+    if ($nic.Count -ne 1) { throw "USB NIC missing or duplicate: $($link.HostIp)" }
+    $prefix = "$($link.McuIp)/32"
+    if (-not (Get-NetRoute -DestinationPrefix $prefix -InterfaceIndex $nic[0].InterfaceIndex -PolicyStore ActiveStore -ErrorAction SilentlyContinue)) {
+        New-NetRoute -DestinationPrefix $prefix -InterfaceIndex $nic[0].InterfaceIndex -NextHop 0.0.0.0 -PolicyStore ActiveStore
+    }
+}
+```
+
+路由仅写入 ActiveStore，重启电脑后需重新执行；不修改默认路由。[New-NetRoute 官方说明](https://learn.microsoft.com/en-us/powershell/module/nettcpip/new-netroute)。仅接 STM32 时不需要这两条路由。
+
+WSL mirrored 网络中用 `ip -br -4 addr` 查看对应 .2、.4 的接口，用 `ip route get 192.168.7.3` 确认走 .4 对应接口。若 Windows 的主机路由没有映射到 WSL，在 WSL 补充（接口名从实际地址识别）：
+
+```bash
+esp_if=$(ip -o -4 addr show | awk '$4 == "192.168.7.2/24" {print $2}')
+stm_if=$(ip -o -4 addr show | awk '$4 == "192.168.7.4/24" {print $2}')
+# 两个变量必须各自对应一个实际接口，否则先检查网卡地址。
+test -n "$esp_if" && sudo ip route replace 192.168.7.1/32 dev "$esp_if" src 192.168.7.2
+test -n "$stm_if" && sudo ip route replace 192.168.7.3/32 dev "$stm_if" src 192.168.7.4
+```
 
 在仓库根目录的 WSL 终端启动 Agent（WSL 需配置 mirrored 网络）：
 
 ```bash
 export ROS_DOMAIN_ID=0
-ping -c 3 192.168.8.1
+ping -c 3 192.168.7.3
 bash Tools/scripts/agent.sh udp 8888 jazzy
 ```
 
@@ -62,7 +93,7 @@ RNDIS 网卡由 Windows 管理，mirrored WSL 使用同一网络；不需要将�
 需要给 WSL 放行两块板时，在仓库根目录的管理员 PowerShell 中执行：
 
 ```powershell
-.\Tools\scripts\configure_agent_firewall.ps1 -Target wsl -McuAddress 192.168.7.1,192.168.8.1
+.\Tools\scripts\configure_agent_firewall.ps1 -Target wsl -McuAddress 192.168.7.1,192.168.7.3
 ```
 
 另开 WSL 终端检查应用：
@@ -111,4 +142,4 @@ bash scripts/build_micro_ros.sh jazzy
 
 2026-10-08：Windows、WSL 的 menuconfig 已打开验证；UART / USB 在两边同一个 Debug、Release 预设中切换构建通过，菜单保存后自动重新配置、无效参数检查通过。Windows Release 的 USB 模式使用 Flash 100,552 B、主 SRAM 51,440 B、CCM 中预留 65,536 B 堆；UART 模式主 SRAM 92,824 B。记录见本机 `build/menuconfig_validation.json`。DHCP 和 RNDIS 边界、错误报文及随机输入测试通过 AddressSanitizer / UndefinedBehaviorSanitizer 检查。TinyUSB 的接收偏移/长度检查补丁记录在 `PATCHES.md`。
 
-USB Release 已通过 ST-Link 烧录并校验；目前电脑尚未枚举到 STM32 原生 USB 网卡，STM32 的 DHCP、ping、heartbeat/echo 实板链路待接上原生 USB 后验证。现有 STM32CubeMX `.ioc` 尚未同步手写 UART/RTOS/USB 集成，重新生成前应合并相关用户代码。
+2026-10-08 地址调整：本机 sdkconfig、菜单默认值均已改为 MCU .3、电脑及 Agent .4；Windows 和 WSL Release 构建通过，Windows USB Release 已通过 ST-Link 烧录并校验。记录见 `build/usb_ipv4_validation.json`、`build/usb_7_3_flash.log`。目前电脑尚未枚举到 STM32 原生 USB 网卡，STM32 的 DHCP、ping、heartbeat/echo 实板链路待原生 USB 枚举成功后验证；两张网卡的路由及 STM32 防火墙放行也尚未实测。现有 STM32CubeMX `.ioc` 尚未同步手写 UART/RTOS/USB 集成，重新生成前应合并相关用户代码。

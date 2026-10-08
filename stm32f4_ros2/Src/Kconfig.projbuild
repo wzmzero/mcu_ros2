@@ -31,13 +31,15 @@ config USB_HSE_HZ
         The reference mcu_test board uses an 8 MHz crystal.
 config USB_MCU_IP
     string "MCU IPv4 address (/24)"
-    default "192.168.8.1"
+    default "192.168.7.3"
 config USB_HOST_IP
     string "USB host DHCP address (/24)"
-    default "192.168.8.2"
+    default "192.168.7.4"
     help
         MCU and host must have different host addresses in the same /24.
         The DHCP offer contains no default gateway or DNS server.
+        ESP32 uses MCU .1 / host .2. STM32 uses MCU .3 / host .4.
+        With both USB NICs connected, add per-MCU /32 host routes.
 config ROS_AGENT_IP
     string "micro-ROS Agent IPv4 address"
     default USB_HOST_IP
