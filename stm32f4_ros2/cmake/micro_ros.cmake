@@ -19,6 +19,9 @@ add_custom_target(menuconfig
         --config ${_sdkconfig} --menuconfig
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} USES_TERMINAL)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE APP_ROS_DOMAIN_ID=${CONFIG_ROS_DOMAIN_ID})
+if(CONFIG_ROS_COMM_DEMO)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE MICRO_ROS_COMM_DEMO=1)
+endif()
 message(STATUS "STM32 transport: USB RNDIS=${CONFIG_ROS_TRANSPORT_USB_RNDIS}")
 
 set(MICRO_ROS_DISTRO "jazzy" CACHE STRING "micro-ROS distribution")

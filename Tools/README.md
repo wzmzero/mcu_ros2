@@ -1,5 +1,7 @@
 # 上位机与测试工具
 
+两板原生 topic/service/action 测试使用 `python3 Tools/tests/test_mcu_protocols.py`，无需电脑 topic 转发节点。编译配置、接口和完整测试步骤见 [COMMUNICATION.md](../firmware/COMMUNICATION.md)。
+
 与 mcu_test 的 Tools 目录职责一致，这里存放 micro-ROS Agent 和通信测试工具。以下命令均从 mcu_ros2 根目录执行。
 
 ## Windows UDP Agent

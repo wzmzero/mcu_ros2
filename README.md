@@ -1,5 +1,7 @@
 # mcu_ros2
 
+ESP32 ↔ STM32 原生 topic 回环、service、action 的编译配置和实板测试见 [通信说明](firmware/COMMUNICATION.md)。传感器优先使用标准 sensor_msgs，板端实现采样驱动。
+
 两个与 micro-ROS 强耦合的 MCU 构建工程，ROS 2 发行版统一为 Jazzy。参考 mcu_test 的公共源码引用方式：公共代码只维护 firmware 一份，各 MCU 的 Src 保留平台适配，上位机和测试工具统一放在 Tools。开发时以本目录作为工程根目录。
 
 ```

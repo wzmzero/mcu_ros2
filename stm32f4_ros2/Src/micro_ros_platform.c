@@ -21,10 +21,33 @@ micro_ros_platform_config_t micro_ros_platform_config(void)
 {
 #ifdef APP_ROS_USB_RNDIS
     uint32_t key = HAL_GetUIDw0() ^ HAL_GetUIDw1() ^ HAL_GetUIDw2();
-    return (micro_ros_platform_config_t){"stm32f407", "/stm32", APP_ROS_DOMAIN_ID, key ? key : 1, false};
+    /* A new XRCE identity per boot avoids reusing the Agent's old DDS writers
+     * and reliable stream state. USB already supplies the RNG's 48 MHz clock. */
+    __HAL_RCC_RNG_CLK_ENABLE();
+    RNG->CR = RNG_CR_RNGEN;
+    uint32_t start = HAL_GetTick();
+    while (!(RNG->SR & RNG_SR_DRDY) && (uint32_t)(HAL_GetTick() - start) < 10u)
+        vTaskDelay(1);
+    if ((RNG->SR & RNG_SR_DRDY) && !(RNG->SR & (RNG_SR_CECS | RNG_SR_SECS))) key ^= RNG->DR;
+    RNG->CR = 0;
+    __HAL_RCC_RNG_CLK_DISABLE();
+    if (!key) key = 1;
 #else
-    return (micro_ros_platform_config_t){"stm32f407", "/stm32", APP_ROS_DOMAIN_ID, 0, true};
+    uint32_t key = 0;
 #endif
+    return (micro_ros_platform_config_t){
+        .node_name = "stm32f407", .node_namespace = "/stm32", .domain_id = APP_ROS_DOMAIN_ID,
+        .client_key = key,
+#ifdef APP_ROS_USB_RNDIS
+        .transport_framing = false,
+#else
+        .transport_framing = true,
+#endif
+        .peer_namespace = "/esp32s3",
+#ifdef CONFIG_ROS_COMM_DEMO
+        .communication_demo = true,
+#endif
+    };
 }
 uint32_t micro_ros_platform_millis(void) { return HAL_GetTick(); }
 void micro_ros_platform_delay(uint32_t milliseconds)

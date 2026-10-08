@@ -14,7 +14,7 @@ extern uint32_t SystemCoreClock;
 #define configMAX_PRIORITIES 8
 #define configMINIMAL_STACK_SIZE ((uint16_t)128)
 #define configTOTAL_HEAP_SIZE ((size_t)(64 * 1024))
-#ifdef APP_ROS_USB_RNDIS
+#if defined(APP_ROS_USB_RNDIS) || defined(MICRO_ROS_COMM_DEMO)
 #define configAPPLICATION_ALLOCATED_HEAP 1
 #endif
 #define configMAX_TASK_NAME_LEN 16

@@ -3,6 +3,12 @@ config APP_ROS_DOMAIN_ID
     int "ROS_DOMAIN_ID (same as Agent and host)"
     range 0 232
     default 0
+config APP_ROS_COMM_DEMO
+    bool "Topic/service/action peer communication demo"
+    default n
+    help
+        Subscribe directly to the STM32 topics, run AddTwoInts services and
+        bounded Fibonacci action client/server. Requires the expanded library.
 choice APP_ROS_TRANSPORT
     prompt "micro-ROS transport"
     default APP_ROS_USB_SERIAL_JTAG

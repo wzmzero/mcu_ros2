@@ -10,6 +10,8 @@ typedef struct {
     size_t domain_id;
     uint32_t client_key; /* Zero retains the library's default key. */
     bool transport_framing; /* true: serial stream; false: complete XRCE datagrams. */
+    const char *peer_namespace;
+    bool communication_demo;
 } micro_ros_platform_config_t;
 /* Init runs once inside the ROS task, before the allocator and transport are used. */
 void micro_ros_platform_init(void);

@@ -1,6 +1,7 @@
 #include "micro_ros.h"
 #include "micro_ros_platform.h"
 #include "micro_ros_config.h"
+#include "communication_demo.h"
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>
 #include <rclc/rclc.h>
@@ -49,6 +50,7 @@ static void destroy_entities(void)
     if (has_support) rmw_uros_set_context_entity_destroy_session_timeout(
         rcl_context_get_rmw_context(&support.context), 0);
     if (has_executor) { cleanup_result(rclc_executor_fini(&executor)); has_executor = false; }
+    if (platform.communication_demo) communication_demo_destroy(&node);
     if (has_subscription) { cleanup_result(rcl_subscription_fini(&command_subscription, &node)); has_subscription = false; }
     if (has_echo) { cleanup_result(rcl_publisher_fini(&echo_publisher, &node)); has_echo = false; }
     if (has_heartbeat) { cleanup_result(rcl_publisher_fini(&heartbeat_publisher, &node)); has_heartbeat = false; }
@@ -88,10 +90,14 @@ static bool create_entities(void)
     if (rclc_subscription_init_default(&command_subscription, &node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), "command") != RCL_RET_OK) return false;
     has_subscription = true;
-    if (rclc_executor_init(&executor, &support.context, 1, &ros_allocator) != RCL_RET_OK) return false;
+    if (platform.communication_demo &&
+        !communication_demo_create(&node, &support, platform.peer_namespace)) return false;
+    size_t handles = 1 + (platform.communication_demo ? COMMUNICATION_DEMO_HANDLES : 0);
+    if (rclc_executor_init(&executor, &support.context, handles, &ros_allocator) != RCL_RET_OK) return false;
     has_executor = true;
     if (rclc_executor_add_subscription(&executor, &command_subscription, &command,
         command_callback, ON_NEW_DATA) != RCL_RET_OK) return false;
+    if (platform.communication_demo && !communication_demo_attach(&executor)) return false;
     ++micro_ros_connections;
     return true;
 }
@@ -121,6 +127,8 @@ void micro_ros_task(void *argument)
             }
             rcl_ret_t result = rclc_executor_spin_some(&executor, RCL_MS_TO_NS(MICRO_ROS_SPIN_MS));
             if (result != RCL_RET_OK && result != RCL_RET_TIMEOUT) break;
+            now = micro_ros_platform_millis();
+            if (platform.communication_demo && !communication_demo_step(now)) break;
             if ((uint32_t)(now - last_publish) >= MICRO_ROS_HEARTBEAT_MS) {
                 last_publish = now;
                 heartbeat.data = heartbeat.data == INT32_MAX ? 0 : heartbeat.data + 1;

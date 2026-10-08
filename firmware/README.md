@@ -1,5 +1,7 @@
 # 公共固件
 
+两板原生 topic 回环、service、action 和传感器消息选择见 [COMMUNICATION.md](COMMUNICATION.md)。可通过各项目 menuconfig 启用，业务实现位于 `app/communication_demo.c`。
+
 参考 mcu_test/firmware 的共享方式：STM32 和 ESP32 的构建同时 include cmake/firmware.cmake，直接编译这里的一份源码。
 
 - app/micro_ros.c：ROS 节点、heartbeat、command/echo、Agent 检测、实体销毁和重连。

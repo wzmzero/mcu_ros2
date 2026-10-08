@@ -22,8 +22,6 @@ _Static_assert(XRCE_MTU <= 1472, "XRCE MTU must fit an unfragmented Ethernet UDP
 typedef struct { uint32_t generation; uint16_t size; uint8_t data[XRCE_MTU]; } xrce_packet_t;
 typedef struct { uint16_t size; uint8_t data[CFG_TUD_NET_MTU]; } eth_packet_t;
 volatile usb_network_stats_t usb_network_stats;
-/* CPU-only allocations and task stacks. USB packets stay in main SRAM. */
-uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute__((section(".ccm_heap"), aligned(8)));
 static struct netif usb_netif;
 static struct udp_pcb *agent_pcb;
 static ip_addr_t agent_ip;

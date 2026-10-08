@@ -27,6 +27,10 @@ micro_ros_platform_config_t micro_ros_platform_config(void)
     return (micro_ros_platform_config_t){
         .node_name = "esp32s3", .node_namespace = "/esp32s3",
         .domain_id = CONFIG_APP_ROS_DOMAIN_ID, .client_key = client_key,
+        .peer_namespace = "/stm32",
+#if CONFIG_APP_ROS_COMM_DEMO
+        .communication_demo = true,
+#endif
 #if CONFIG_APP_ROS_WIFI_UDP || CONFIG_APP_ROS_USB_RNDIS_UDP
         .transport_framing = false,
 #else

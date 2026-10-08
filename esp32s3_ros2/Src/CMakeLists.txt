@@ -15,6 +15,9 @@ idf_component_register(
 # Src is the application component; there is deliberately no separate main/.
 target_link_libraries(${COMPONENT_LIB} INTERFACE "-u app_main")
 target_compile_options(${COMPONENT_LIB} PRIVATE -Wall -Wextra)
+if(CONFIG_APP_ROS_COMM_DEMO)
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE MICRO_ROS_COMM_DEMO=1)
+endif()
 # rcutils requests Annex K; picolibc must see that before any libc header.
 if(CONFIG_LIBC_PICOLIBC)
     target_compile_definitions(${COMPONENT_LIB} PRIVATE __STDC_WANT_LIB_EXT1__=1)

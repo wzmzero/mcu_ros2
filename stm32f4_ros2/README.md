@@ -1,5 +1,7 @@
 # stm32f4_ros2
 
+两板原生 topic/service/action 及传感器消息说明见 [COMMUNICATION.md](../firmware/COMMUNICATION.md)，通过应用菜单的 **Topic/service/action peer communication demo** 启用。
+
 STM32F407VET6 + FreeRTOS + Jazzy micro-ROS。公共应用位于 `../firmware/app`，本工程 `Src` 提供硬件和传输适配。可以在编译前选择 USART1 DMA 或原生 USB RNDIS + UDP。
 
 ## 构建与 menuconfig

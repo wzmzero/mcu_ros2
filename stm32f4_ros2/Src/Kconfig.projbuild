@@ -14,6 +14,12 @@ config ROS_DOMAIN_ID
     int "ROS domain ID"
     range 0 232
     default 0
+config ROS_COMM_DEMO
+    bool "Topic/service/action peer communication demo"
+    default n
+    help
+        Subscribe directly to the ESP32 topics, run AddTwoInts services and
+        bounded Fibonacci action client/server. Requires the expanded library.
 config ROS_UART_BAUD
     int "USART1 baud rate"
     depends on ROS_TRANSPORT_UART

@@ -1,5 +1,7 @@
 # esp32s3_ros2
 
+两板原生 topic/service/action 及传感器消息说明见 [COMMUNICATION.md](../firmware/COMMUNICATION.md)，通过应用菜单的 **Topic/service/action peer communication demo** 启用。
+
 Wi-Fi UDP、USB RNDIS 网络模式、WSL Agent 启动和网络收发测试见 [NETWORK.md](NETWORK.md)。
 
 参考 mcu_test/esp32s3_test 的 ESP-IDF + Src 布局，接入官方 micro_ros_espidf_component Jazzy 分支。组件必要源文件已放在 components 下，23 个文件的 Git blob SHA 已验证，版本与来源记录在组件 UPSTREAM.json。
@@ -15,7 +17,7 @@ Wi-Fi UDP、USB RNDIS 网络模式、WSL Agent 启动和网络收发测试见 [N
 - 各模式默认 UART0 115200 诊断，原生 USB 或 UART1 数据口仅传 XRCE 帧；bootloader 日志关闭。旧 sdkconfig 保留已有控制台选择，可在 menuconfig 中修改。
 - 节点 /esp32s3/esp32s3；heartbeat 每秒发布 Int32；command 原值回传 echo。
 - Agent 未启动时持续等待；断线后销毁实体并重建。默认 ROS_DOMAIN_ID=0。
-- app-colcon.meta 使用 custom transport，支持串口 framing 和 UDP 数据包模式，资源配置为 1 节点、2 发布者、1 订阅者。
+- app-colcon.meta 使用 custom transport，支持串口 framing 和 UDP 数据包模式；资源配置为 1 节点、10 发布者、5 订阅者、4 service、4 client、12 history slots，支持可选的两板通信示例。
 
 修改节点/收发/重连逻辑请编辑 ../firmware/app/micro_ros.c；心跳与超时参数编辑 ../firmware/app/micro_ros_config.h。本工程 Src/micro_ros_platform.c 只提供 ESP-IDF 初始化、配置、时间和延时。
 

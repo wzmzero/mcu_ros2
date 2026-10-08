@@ -9,6 +9,11 @@
 #include "task.h"
 #include <errno.h>
 
+#if configAPPLICATION_ALLOCATED_HEAP
+/* CPU-only heap/task stacks. UART RX DMA and USB packets remain in main SRAM. */
+uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute__((section(".ccm_heap"), aligned(8)));
+#endif
+
 void board_start(void)
 {
 #ifdef APP_ROS_USB_RNDIS
