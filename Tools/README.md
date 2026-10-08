@@ -66,4 +66,29 @@ ros2 topic pub --once /stm32/command std_msgs/msg/Int32 '{data: 123}'
 
 ESP32 把话题中的 stm32 改成 esp32s3。
 
+如果 Agent 已持续收到 MCU 数据，但 WSL 的 ROS 订阅仍收不到，可显式让同一 WSL 内的 Agent 和 ROS 节点使用回环 UDP DDS。先停止原有 UDP Agent，避免重复绑定 8888；然后在仓库根目录的 Agent 终端执行：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+export FASTRTPS_DEFAULT_PROFILES_FILE="$(pwd)/Tools/config/fastdds_wsl_local.xml"
+bash Tools/scripts/agent.sh udp 8888 jazzy
+```
+
+另一个 WSL 终端同样 source、设置域和 profile 后，执行两板实测：
+
+```bash
+source /opt/ros/jazzy/setup.bash
+export ROS_DOMAIN_ID=0
+export FASTRTPS_DEFAULT_PROFILES_FILE="$(pwd)/Tools/config/fastdds_wsl_local.xml"
+python3 Tools/tests/test_mcu_topics.py --relay
+# 只测试一块板：python3 Tools/tests/test_mcu_topics.py --boards esp32s3
+```
+
+测试分别发送 ESP32 command=57007、STM32 command=57008，检查各自至少三个不同 heartbeat 和三次 echo。`--relay` 随后将**真实 STM32** 的 `/stm32/heartbeat` 转发到 `/esp32s3/command`，至少三个不同值由 ESP32 的 `/esp32s3/echo` 回传才通过；缺少任何板的数据会超时失败，不会使用模拟 STM32 数据。测试结束会停止该转发，不停止已有 Agent。报告保存在 `Tools/build/dual_mcu/topics_validation.json`。
+
+该 profile 只限制 Agent 与 ROS 进程之间的 DDS 通信，MCU 发到 .2/.4:8888 的 XRCE UDP 保持可用；它适用于同一 WSL 内的测试，不适合 Windows Qt ROS 节点或其他电脑直接加入 DDS。配置定义见 [Fast DDS 官方文档](https://fast-dds.docs.eprosima.com/en/2.14.x/fastdds/xml_configuration/transports.html)。
+
+2026-10-08 两板实测通过：ESP32 heartbeat 1715–1720、STM32 heartbeat 162–167，各自 command/echo 通过；STM32 的 165、166、167 经电脑转发后由 ESP32 原值回传。当前固件只订阅自身 `command`，没有直接订阅另一块板的 heartbeat。如果需要无需电脑转发的通信，可让 ESP32 的订阅话题改为绝对名称 `/stm32/heartbeat`，或增加该订阅及 executor handle，同时检查静态库的订阅数量限制。话题名称、消息类型、ROS 域及 QoS 必须匹配；Agent 在 DDS 中代表两块 MCU 转发数据，不要求 MCU 之间能直接 ping。
+
 新的 Agent 工作区在 Tools/build/micro_ros；已有的旧工作区包含绝对路径，脚本会自动复用工程根目录或上一层的 build/micro_ros。可用 MICRO_ROS_HOST_ROOT 指定缓存根目录，该目录应包含 build/micro_ros。

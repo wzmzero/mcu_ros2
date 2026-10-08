@@ -20,6 +20,8 @@
 #define LWIP_RAW 0
 #define LWIP_DNS 0
 #define LWIP_DHCP 0
+/* Permit DHCP server requests before the host has an IPv4 source address. */
+#define LWIP_IP_ACCEPT_UDP_PORT(dst_port) ((dst_port) == PP_NTOHS(67))
 #define LWIP_AUTOIP 0
 #define LWIP_IGMP 0
 #define LWIP_NETCONN 0

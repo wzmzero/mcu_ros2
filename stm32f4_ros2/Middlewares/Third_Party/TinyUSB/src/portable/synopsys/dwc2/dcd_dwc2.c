@@ -513,9 +513,15 @@ bool dcd_init(uint8_t rhport, const tusb_rhport_init_t* rh_init) {
   // Force device mode
   dwc2->gusbcfg = (dwc2->gusbcfg & ~GUSBCFG_FHMOD) | GUSBCFG_FDMOD;
 
-  // No overrides
-  dwc2->gotgctl &= ~(GOTGCTL_BVALOEN | GOTGCTL_BVALOVAL | GOTGCTL_VBVALOVAL);
-
+  // Restore device session validity for boards without a VBUS sense pin.
+  uint32_t gotgctl = dwc2->gotgctl & ~GOTGCTL_AVALOEN;
+  if (!_tud_cfg.vbus_sensing) {
+    gotgctl |= GOTGCTL_BVALOEN | GOTGCTL_BVALOVAL;
+  }
+  dwc2->gotgctl = gotgctl;
+  #ifdef TUP_USBIP_DWC2_STM32
+  dwc2_stm32_gccfg_cfg(dwc2, _tud_cfg.vbus_sensing, false);
+  #endif
 
   // Enable required interrupts
   dwc2->gintmsk |= GINTMSK_OTGINT | GINTMSK_USBRST | GINTMSK_ENUMDNEM | GINTMSK_WUIM;

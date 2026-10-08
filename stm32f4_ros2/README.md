@@ -142,4 +142,6 @@ bash scripts/build_micro_ros.sh jazzy
 
 2026-10-08：Windows、WSL 的 menuconfig 已打开验证；UART / USB 在两边同一个 Debug、Release 预设中切换构建通过，菜单保存后自动重新配置、无效参数检查通过。Windows Release 的 USB 模式使用 Flash 100,552 B、主 SRAM 51,440 B、CCM 中预留 65,536 B 堆；UART 模式主 SRAM 92,824 B。记录见本机 `build/menuconfig_validation.json`。DHCP 和 RNDIS 边界、错误报文及随机输入测试通过 AddressSanitizer / UndefinedBehaviorSanitizer 检查。TinyUSB 的接收偏移/长度检查补丁记录在 `PATCHES.md`。
 
-2026-10-08 地址调整：本机 sdkconfig、菜单默认值均已改为 MCU .3、电脑及 Agent .4；Windows 和 WSL Release 构建通过，Windows USB Release 已通过 ST-Link 烧录并校验。记录见 `build/usb_ipv4_validation.json`、`build/usb_7_3_flash.log`。目前电脑尚未枚举到 STM32 原生 USB 网卡，STM32 的 DHCP、ping、heartbeat/echo 实板链路待原生 USB 枚举成功后验证；两张网卡的路由及 STM32 防火墙放行也尚未实测。现有 STM32CubeMX `.ioc` 尚未同步手写 UART/RTOS/USB 集成，重新生成前应合并相关用户代码。
+2026-10-08 实板验证：MCU .3、电脑及 Agent .4，Windows/WSL USB Release 构建及 ST-Link 烧录校验通过。修复引入的 TinyUSB 驱动中遗漏的 STM32 GCCFG/VBUS 初始化，并在 lwIP 中允许 DHCP 服务接收源地址为 0.0.0.0 的请求；此前只编译和报文解析测试通过，未发现这两个集成问题。修复后 Windows 自动加载 RNDIS 驱动（0483:5741）并通过 DHCP 获得 .4，Windows/WSL 的 MCU /32 路由和双 MCU UDP 8888 放行生效，WSL ping 两块板均三次成功。
+
+同一个 WSL Agent 同时收到 ESP32、STM32 的 heartbeat、command/echo；真实 STM32 heartbeat 165、166、167 经电脑转发到 ESP32 command 后，ESP32 原值回传成功。测试采用 WSL 回环 UDP DDS profile，命令与限制见 [Tools README](../Tools/README.md)。记录在 `../Tools/build/dual_mcu/topics_validation.json`、本机 `build/usb_ipv4_validation.json` 和 `build/usb_dhcp_fix_flash.log`。此验证包含电脑转发，ESP32 固件尚未直接订阅 STM32 的 heartbeat。现有 STM32CubeMX `.ioc` 尚未同步手写 UART/RTOS/USB 集成，重新生成前应合并相关用户代码。
