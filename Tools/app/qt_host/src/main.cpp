@@ -8,6 +8,7 @@
 
 void startSmokeTest(MainWindow &window, const QString &report,
                     const QString &screenshot, bool sensorTest);
+void startAgentTest(MainWindow &window, const QString &report);
 int main(int argc, char **argv) {
   QApplication app(argc, argv);
 #ifdef Q_OS_WIN
@@ -31,6 +32,10 @@ int main(int argc, char **argv) {
                                    "/qt_ros2_test/temperature test fixture."});
   parser.addOption(
       {"connect", "Connect automatically using default settings."});
+  parser.addOption(
+      {"agent-test",
+       "Test real Agent start/stop/restart through Qt on spare port 18888.",
+       "report.json"});
   // QCommandLineParser::process() may display a modal help box on Windows.
   // Keep command-line/help checks usable from CTest and redirected processes.
   if (!parser.parse(app.arguments())) {
@@ -45,9 +50,16 @@ int main(int argc, char **argv) {
     QTextStream(stdout) << QCoreApplication::applicationVersion() << Qt::endl;
     return 0;
   }
+  if (parser.isSet("agent-test") && parser.isSet("smoke-test")) {
+    QTextStream(stderr) << "Choose either --agent-test or --smoke-test"
+                        << Qt::endl;
+    return 2;
+  }
   MainWindow window;
   window.show();
-  if (parser.isSet("smoke-test"))
+  if (parser.isSet("agent-test"))
+    startAgentTest(window, parser.value("agent-test"));
+  else if (parser.isSet("smoke-test"))
     startSmokeTest(window, parser.value("smoke-test"),
                    parser.value("screenshot"), parser.isSet("sensor-test"));
   else if (parser.isSet("connect"))

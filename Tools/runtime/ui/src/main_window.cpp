@@ -64,9 +64,31 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), session_(this) {
   controls->addWidget(connection_);
   controls->addStretch();
   layout->addLayout(controls);
+  auto agentControls = new QHBoxLayout;
+  autoAgent_ = new QCheckBox("连接时启动 / 复用 Agent");
+  autoAgent_->setObjectName("autoAgent");
+  autoAgent_->setChecked(true);
+  agentPort_ = new QSpinBox;
+  agentPort_->setObjectName("agentPort");
+  agentPort_->setRange(1, 65535);
+  agentPort_->setValue(8888);
+  agentStart_ = new QPushButton("启动 / 检查 Agent");
+  agentStart_->setObjectName("agentStart");
+  agentStop_ = new QPushButton("停止本程序 Agent");
+  agentStop_->setObjectName("agentStop");
+  agentState_ = new QLabel("未检查");
+  agentState_->setObjectName("agentState");
+  agentControls->addWidget(autoAgent_);
+  agentControls->addWidget(new QLabel("UDP 端口"));
+  agentControls->addWidget(agentPort_);
+  agentControls->addWidget(agentStart_);
+  agentControls->addWidget(agentStop_);
+  agentControls->addWidget(agentState_);
+  agentControls->addStretch();
+  layout->addLayout(agentControls);
   auto note =
-      new QLabel("Agent 需单独运行；收到心跳后板卡才显示在线。板间通信由 ROS 2 "
-                 "/ Agent 完成。");
+      new QLabel("Agent 在 ROS 后端所在的 Linux / WSL "
+                 "中运行；收到心跳后板卡才显示在线。UDP 端口需与固件一致。");
   note->setStyleSheet("color:#526575;");
   layout->addWidget(note);
   telemetry_ = new QTableWidget(2, 10);
@@ -232,14 +254,39 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), session_(this) {
     wsl_->setEnabled(!ready);
     domain_->setEnabled(!ready);
     localDds_->setEnabled(!ready);
-    if (ready)
+    agentStart_->setEnabled(ready);
+    agentStop_->setEnabled(false);
+    agentPort_->setEnabled(ready);
+    if (ready) {
       session_.request({{"op", "graph"}});
-    else {
+      if (autoAgent_->isChecked())
+        session_.request(
+            {{"op", "agent_start"}, {"port", agentPort_->value()}});
+      else
+        session_.request({{"op", "agent_status"}});
+    } else {
+      agentState_->setText("未连接");
       model_.clear();
       actionIds_.clear();
       refreshBoards();
     }
   });
+  agentStart_->setEnabled(false);
+  agentStop_->setEnabled(false);
+  agentPort_->setEnabled(false);
+  connect(agentStart_, &QPushButton::clicked, this, [this] {
+    session_.request({{"op", "agent_start"}, {"port", agentPort_->value()}});
+  });
+  connect(agentStop_, &QPushButton::clicked, this,
+          [this] { session_.request({{"op", "agent_stop"}}); });
+  connect(agentPort_, qOverload<int>(&QSpinBox::valueChanged), this,
+          [this](int value) {
+            if (session_.ready() && !agentInfo_["owned"].toBool())
+              agentStart_->setEnabled(value != agentInfo_["port"].toInt() ||
+                                      agentInfo_["state"] == "unchecked" ||
+                                      agentInfo_["state"] == "stopped" ||
+                                      agentInfo_["state"] == "error");
+          });
   for (auto button : {publish, call, send, cancel, subscribe, refresh}) {
     button->setEnabled(false);
     connect(&session_, &RosSession::readyChanged, button,
@@ -354,7 +401,31 @@ void MainWindow::refreshBoards() {
 }
 void MainWindow::handleEvent(const QJsonObject &e) {
   auto event = e["event"].toString();
-  if (event == "telemetry") {
+  if (event == "agent") {
+    agentInfo_ = e;
+    auto state = e["state"].toString();
+    auto owned = e["owned"].toBool();
+    auto text = state == "running"
+                    ? (owned ? "运行中（本程序启动）" : "运行中（复用外部）")
+                : state == "starting"  ? "启动 / 检查中…"
+                : state == "stopping"  ? "停止中…"
+                : state == "unchecked" ? "未检查"
+                : state == "error"     ? "Agent 错误"
+                                       : "Agent 已停止";
+    agentState_->setText(text);
+    agentStart_->setEnabled(
+        session_.ready() &&
+        (state == "stopped" || state == "error" || state == "unchecked" ||
+         (!owned && e["port"].toInt() != agentPort_->value())));
+    agentStop_->setEnabled(session_.ready() && owned &&
+                           (state == "starting" || state == "running"));
+    agentPort_->setEnabled(session_.ready() && !owned && state != "starting");
+    appendLog(QString("Agent UDP %1：%2 %3")
+                  .arg(e["port"].toInt())
+                  .arg(text, e["error"].toString()));
+  } else if (event == "agent_log") {
+    appendLog("Agent: " + e["message"].toString());
+  } else if (event == "telemetry") {
     model_.update(e["board"].toString().toStdString(),
                   e["field"].toString().toStdString(),
                   e["value"].toString().toStdString(), elapsed());
@@ -382,6 +453,8 @@ void MainWindow::handleEvent(const QJsonObject &e) {
     auto op = e["op"].toString();
     auto result = e["result"].toObject();
     auto ok = e["ok"].toBool();
+    if (op.startsWith("agent_") && !ok)
+      agentState_->setText("Agent 操作失败");
     if (op == "graph" && ok) {
       graph_->setPlainText(QString::fromUtf8(
           QJsonDocument(result).toJson(QJsonDocument::Indented)));

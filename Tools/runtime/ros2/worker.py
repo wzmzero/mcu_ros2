@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import uuid
+from pathlib import Path
 
 import rclpy
 from rclpy.action import ActionClient
@@ -19,6 +20,8 @@ from example_interfaces.srv import AddTwoInts
 from std_msgs.msg import Int32, Int64
 from rosidl_runtime_py.utilities import get_message
 from rosidl_runtime_py.convert import message_to_ordereddict
+from ament_index_python.packages import get_package_prefix, PackageNotFoundError
+from agent_runtime import AgentRuntime
 
 BOARDS = ('esp32s3', 'stm32')
 FIELDS = ('heartbeat', 'echo', 'peer_received', 'roundtrip', 'service_result',
@@ -46,6 +49,13 @@ class Worker:
         self.latest_sensors = {}
         self.last_sensor_flush = 0.0
         self.running = True
+        try:
+            executable = Path(get_package_prefix('micro_ros_agent')) / 'lib/micro_ros_agent/micro_ros_agent'
+            if not executable.is_file():
+                executable = None
+        except PackageNotFoundError:
+            executable = None
+        self.agent = AgentRuntime(executable, emit)
         for board in BOARDS:
             self.publishers[board] = self.node.create_publisher(Int32, f'/{board}/command', 10)
             self.services[board] = self.node.create_client(AddTwoInts, f'/{board}/add_two_ints')
@@ -153,6 +163,13 @@ class Worker:
                 self.running = False
                 self.response(c, {'stopped': True})
                 return
+            if op in ('agent_start', 'agent_stop', 'agent_status'):
+                result = (self.agent.start(c.get('port', 8888)) if op == 'agent_start'
+                          else self.agent.stop() if op == 'agent_stop' else self.agent.status())
+                if op == 'agent_status':
+                    self.agent.notify()
+                self.response(c, result)
+                return
             if op == 'graph':
                 topics = [{'name': name, 'types': types} for name, types in self.node.get_topic_names_and_types()]
                 self.response(c, {'topics': topics, 'nodes': self.node.get_node_names(),
@@ -233,6 +250,7 @@ class Worker:
                     except queue.Empty:
                         break
                 rclpy.spin_once(self.node, timeout_sec=0.02)
+                self.agent.tick()
                 now = time.monotonic()
                 if now - self.last_sensor_flush >= 0.1:
                     for value in self.latest_sensors.values():
@@ -248,15 +266,20 @@ class Worker:
                             client.remove_pending_request(future)
                         self.finish(ident, error='ROS request timed out (12 seconds)')
         finally:
-            # Only cancel this UI's goals; do not stop Agent or MCU peer traffic.
-            for goal in list(self.goals.values()):
-                goal.cancel_goal_async()
-            deadline = time.monotonic() + 0.4
-            while self.goals and rclpy.ok() and time.monotonic() < deadline:
-                rclpy.spin_once(self.node, timeout_sec=0.02)
-            for action in self.actions.values():
-                action.destroy()
-            self.node.destroy_node()
+            try:
+                # Cancel this UI's goals while its Agent is still available.
+                if rclpy.ok():
+                    for goal in list(self.goals.values()):
+                        goal.cancel_goal_async()
+                    deadline = time.monotonic() + 0.4
+                    while self.goals and rclpy.ok() and time.monotonic() < deadline:
+                        rclpy.spin_once(self.node, timeout_sec=0.02)
+                for action in self.actions.values():
+                    action.destroy()
+                self.node.destroy_node()
+            finally:
+                # Also runs if ROS cleanup fails or stdout has disconnected.
+                self.agent.close()
 
 
 def main():

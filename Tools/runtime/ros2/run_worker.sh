@@ -10,6 +10,11 @@ local_dds="${3:-1}"
 # ROS setup scripts can refer to unset variables.
 set +u
 source "/opt/ros/$distro/setup.bash"
+for overlay in \
+    "$script_dir/../../../micro_ros/$distro/agent/install/local_setup.bash" \
+    "$script_dir/../../build/micro_ros/$distro/agent/install/local_setup.bash"; do
+    if [[ -f "$overlay" ]]; then source "$overlay"; break; fi
+done
 set -u
 export ROS_DOMAIN_ID="$domain"
 if [[ "$local_dds" == 1 ]]; then

@@ -28,6 +28,7 @@ struct Smoke {
   QTimer timer;
   QJsonObject report{{"passed", false}, {"topic_forwarding", false}};
   QJsonArray checks;
+  QJsonObject agent;
   QMap<QString, QMap<QString, QSet<QString>>> samples;
   QList<Operation> operations;
   int index = -1;
@@ -120,6 +121,8 @@ struct Smoke {
     if (finished)
       return;
     auto event = e["event"].toString();
+    if (event == "agent")
+      agent = e;
     if (event == "telemetry") {
       auto &values = samples[e["board"].toString()][e["field"].toString()];
       values.insert(e["value"].toString());
@@ -245,7 +248,10 @@ struct Smoke {
         good = good && confirmed.size() >= 3 &&
                window->model().online(board.toStdString(), now);
       }
-      if (good) {
+      if (good && agent["verified"].toBool()) {
+        checks.append(QJsonObject{{"op", "automatic_agent_start_or_reuse"},
+                                  {"owned", agent["owned"]},
+                                  {"passed", true}});
         checks.append(
             QJsonObject{{"op", "native_peer_roundtrip"}, {"passed", true}});
         advance();
