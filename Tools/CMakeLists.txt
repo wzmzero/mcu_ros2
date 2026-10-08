@@ -1,0 +1,35 @@
+cmake_minimum_required(VERSION 3.25)
+project(qt_ros2 VERSION 1.0 LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Widgets)
+
+# core: no Qt/ROS dependency. runtime: process transport and presentation.
+add_library(qt_ros_core STATIC core/model/src/board_model.cpp)
+target_include_directories(qt_ros_core PUBLIC core/model/include)
+set_target_properties(qt_ros_core PROPERTIES AUTOMOC OFF)
+add_library(qt_ros_bridge STATIC runtime/bridge/src/ros_session.cpp runtime/bridge/include/ros_session.h)
+target_include_directories(qt_ros_bridge PUBLIC runtime/bridge/include)
+target_link_libraries(qt_ros_bridge PUBLIC Qt6::Core)
+add_library(qt_ros_ui STATIC runtime/ui/src/main_window.cpp runtime/ui/include/main_window.h)
+target_include_directories(qt_ros_ui PUBLIC runtime/ui/include)
+target_link_libraries(qt_ros_ui PUBLIC qt_ros_core qt_ros_bridge Qt6::Widgets)
+add_executable(qt_ros2 app/qt_host/src/main.cpp app/qt_host/tests/smoke_test.cpp)
+target_link_libraries(qt_ros2 PRIVATE qt_ros_ui)
+if(MSVC)
+    target_compile_options(qt_ros_ui PRIVATE /utf-8)
+    target_compile_options(qt_ros2 PRIVATE /utf-8)
+endif()
+add_custom_target(qt_ros_assets ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/runtime/ros2" "$<TARGET_FILE_DIR:qt_ros2>/runtime/ros2"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:qt_ros2>/config"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_CURRENT_SOURCE_DIR}/config/fastdds_wsl_local.xml" "$<TARGET_FILE_DIR:qt_ros2>/config/fastdds_wsl_local.xml")
+add_dependencies(qt_ros2 qt_ros_assets)
+enable_testing()
+add_test(NAME qt_ros2_help COMMAND qt_ros2 --help)
+set_tests_properties(qt_ros2_help PROPERTIES TIMEOUT 10)
+if(NOT WIN32)
+    set_tests_properties(qt_ros2_help PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
+# Hardware tests are opt-in: qt_ros2 --smoke-test report.json --screenshot window.png

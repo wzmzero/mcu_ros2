@@ -1,5 +1,7 @@
 # 上位机与测试工具
 
+Qt 上位机已按 core / runtime / app 分层实现：Windows 原生界面 + WSL ROS 2 后端，Linux 下使用本地后端。构建、部署、两板 Topic / Service / Action 测试见 [Qt 工作台说明](app/qt_host/README.md)。Windows 可执行文件为 `Tools/build/windows/qt_ros2.exe`。
+
 两板原生 topic/service/action 测试使用 `python3 Tools/tests/test_mcu_protocols.py`，无需电脑 topic 转发节点。编译配置、接口和完整测试步骤见 [COMMUNICATION.md](../firmware/COMMUNICATION.md)。
 
 与 mcu_test 的 Tools 目录职责一致，这里存放 micro-ROS Agent 和通信测试工具。以下命令均从 mcu_ros2 根目录执行。
